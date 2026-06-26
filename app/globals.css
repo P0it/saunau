@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+/*
+ * 사우나우 디자인 토큰 — sauna-now.dc.html(비교안 B)에서 추출.
+ * 원칙: 90% 절제(흰 배경·먹색·회색) : 10% 따뜻함(빨강/파랑은 온도·핵심 순간에만).
+ */
+@theme {
+  /* 브랜드/의미 색 */
+  --color-brand: #f5402c; /* vermilion — 워드마크·주요 CTA·활성·사우나실(뜨거움) */
+  --color-hot: #f5402c; /* 사우나실/뜨거움 (brand와 동일 톤) */
+  --color-cold: #1c6fff; /* 냉탕/차가움 전용 짝 */
+
+  /* 중립 */
+  --color-ink: #22201e; /* 본문 먹색 */
+  --color-muted: #8b8680; /* 서브텍스트 회색 */
+  --color-frame: #f3f3f4; /* 앱 프레임 배경(거의 흰색) */
+  --color-card: #ffffff; /* 카드 흰색 */
+  --color-line: #e3e3e7; /* 헤어라인 보더 */
+  --color-line-soft: #e7e7ea;
+  --color-tab-idle: #b5afa7; /* 비활성 탭/아이콘 */
+  --color-dot: #d8d5d1; /* 구분점 */
+
+  /* radius */
+  --radius-card: 22px;
+  --radius-tile: 18px;
+  --radius-frame: 30px;
+
+  --font-sans: Pretendard, system-ui, -apple-system, sans-serif;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #eaeaec; /* 데스크톱 프레임 외곽 배경(디자인 캔버스 색) */
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 가로 스크롤 영역 스크롤바 숨김(디자인의 .scr) */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/*
+ * 사우나 열기(heat) — 지도에서 선택된 카드/핀에 적용.
+ * 딱딱한 빨강 테두리 대신, 사우나실 온기가 피어오르듯 따뜻한 글로우가 은은히 맥동.
+ */
+@keyframes saunaHeat {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(245, 64, 44, 0.25),
+      0 4px 18px rgba(245, 64, 44, 0.18),
+      0 0 26px rgba(255, 110, 60, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(245, 64, 44, 0.4),
+      0 8px 26px rgba(245, 64, 44, 0.34),
+      0 0 44px rgba(255, 110, 60, 0.34);
+  }
+}
+.heat-focus {
+  animation: saunaHeat 2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .heat-focus {
+    animation: none;
+    box-shadow:
+      0 0 0 1px rgba(245, 64, 44, 0.3),
+      0 6px 22px rgba(245, 64, 44, 0.28),
+      0 0 32px rgba(255, 110, 60, 0.26);
+  }
+}
