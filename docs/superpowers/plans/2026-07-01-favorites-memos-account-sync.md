@@ -20,21 +20,21 @@
 
 ---
 
-### Task 1: 메모 테이블 마이그레이션 `0022_memos.sql`
+### Task 1: 메모 테이블 마이그레이션 `0023_memos.sql`
 
 **Files:**
-- Create: `supabase/migrations/0022_memos.sql`
+- Create: `supabase/migrations/0023_memos.sql`
 
 **Interfaces:**
 - Produces: `public.sauna_memos (user_id uuid, sauna_id uuid, note text, created_at, updated_at)` PK `(user_id, sauna_id)`, RLS 본인 행 select/insert/update/delete. Task 3(`lib/records.ts`)이 이 테이블을 조회/upsert/삭제한다.
 
 - [ ] **Step 1: 마이그레이션 파일 작성**
 
-`supabase/migrations/0022_memos.sql`:
+`supabase/migrations/0023_memos.sql`:
 
 ```sql
 -- ============================================================
--- 0022_memos — 로그인 사용자 비공개 메모(사우나별)
+-- 0023_memos — 로그인 사용자 비공개 메모(사우나별)
 -- 지금까지 메모는 브라우저 localStorage(lib/records.ts)에만 있었다.
 -- 로그인(0011)이 붙었고 찜(0019)을 서버로 옮기는 것과 함께
 -- 메모도 계정에 저장해 기기가 바뀌어도 유지되게 한다.
@@ -77,13 +77,13 @@ create policy "memos delete own" on public.sauna_memos
 
 - [ ] **Step 2: 형식 검증(파일 존재·번호 충돌 없음)**
 
-Run: `ls supabase/migrations/0022_memos.sql`
-Expected: 경로 출력. `0022_` 번호가 유일(직전 최신은 `0021_sesin_shop.sql`).
+Run: `ls supabase/migrations/0023_memos.sql`
+Expected: 경로 출력. `0023_` 번호가 유일(직전 최신은 `0022_article_topics.sql`).
 
 - [ ] **Step 3: 커밋**
 
 ```bash
-git add supabase/migrations/0022_memos.sql
+git add supabase/migrations/0023_memos.sql
 git commit -m "feat(db): sauna_memos 테이블(로그인 사용자 비공개 메모) 마이그레이션"
 ```
 
@@ -781,7 +781,7 @@ git commit -m "feat(records): 기록 탭 비로그인 상태 로그인 유도 UI
 
 - [ ] **Step 1: 마이그레이션 적용(사용자)**
 
-`supabase/migrations/0022_memos.sql` 내용을 Supabase Dashboard > SQL Editor에 붙여넣어 실행. `sauna_memos` 테이블과 4개 정책이 생성됐는지 확인.
+`supabase/migrations/0023_memos.sql` 내용을 Supabase Dashboard > SQL Editor에 붙여넣어 실행. `sauna_memos` 테이블과 4개 정책이 생성됐는지 확인.
 
 - [ ] **Step 2: 빌드 통과 확인**
 
