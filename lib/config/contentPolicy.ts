@@ -17,10 +17,12 @@ import type { ContentPolicy, PhotoSource } from "@/lib/data/types";
 
 const ALL_SOURCES: PhotoSource[] = [
   "naver_crawl",
+  "website",
   "owner",
   "editor",
   "google",
   "licensed",
+  "user", // 사용자 업로드(0014) — 모더레이션 승인분만 RLS 로 노출됨
 ];
 
 const TTL_MS = 30_000; // 플래그 변경은 최대 30초 내 반영

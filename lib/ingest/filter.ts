@@ -5,6 +5,7 @@
  * 단 진짜 탕은 안 버린다(공동탕/한증/찜질은 법적 탕). 세신샵은 테마로 따로 관리 → 반드시 보존.
  *
  *  - exclude(not_operating): 영업상태코드 ≠ 01
+ *  - exclude(hard non_bath): 점핑/트램폴린 스튜디오 → 이름에 찜질을 붙여도 욕탕 아님 → 구제 불가 제외
  *  - exclude(non_bath): "목욕장업 기타"(약한 misc 라이선스) + 피트니스/미용名 + 구제 없음 → 제외
  *  - review: 공동탕/한증/찜질(강한 탕 라이선스) + 피트니스/미용名 → 적재하되 needs_review(노출 보류)
  *  - keep: 그 외 전부
@@ -13,13 +14,18 @@ import type { BathApiItem } from "./types";
 
 const OPERATING_CODE = "01";
 
+// 트램폴린/점핑 다이어트 스튜디오: "온열찜질"·"찜질"을 상호에 붙여도 진짜 찜질방이 아님.
+// RESCUE(찜질) 로 구제하지 않고 무조건 제외한다(라이선스·업태 불문).
+const HARD_NON_BATH_RE = /점핑|트램폴린/;
+
 // 실제 욕탕을 보유한 라이선스 = 공동탕업(공동탕업+찜질 포함)만.
 // 찜질시설·한증막은 욕탕이 없어, 다이어트·점핑名이면 진짜 찜질방이 아닌 스튜디오 → 제외 대상.
 const PUBLIC_BATH_UPTAE_RE = /공동탕/;
 
-// 헬스장/스포츠/골프/미용·다이어트 부속 이름
+// 헬스장/스포츠/골프/미용·다이어트 부속 이름 (구제 키워드가 있으면 keep — 진짜 탕에 부속된 경우)
+// ※ 점핑/트램폴린은 구제 불가라 HARD_NON_BATH_RE 로 따로 처리(여기서 제외).
 const NON_BATH_NAME_RE =
-  /피트니스|휘트니스|헬스|스포츠|스포렉스|스포츠센터|짐|gym|골프|클럽|레포츠|점핑|미용|피부|에스테|스킨|왁싱|네일|마사지|테라피|다이어트|슬리밍/i;
+  /피트니스|휘트니스|헬스|스포츠|스포렉스|스포츠센터|짐|gym|골프|클럽|레포츠|미용|피부|에스테|스킨|왁싱|네일|마사지|테라피|다이어트|슬리밍/i;
 
 // 명백한 목욕시설 이름 → 위 키워드가 있어도 구제. 세신·복지관 포함(세신샵 테마 보존).
 const RESCUE_NAME_RE =
@@ -43,8 +49,15 @@ export function classify(item: BathApiItem): FilterResult {
     return { action: "exclude", reason: "not_operating" };
   }
 
+  const name = item.BPLC_NM ?? "";
+
+  // 점핑/트램폴린 스튜디오: 찜질 구제 불가 → 무조건 제외.
+  if (HARD_NON_BATH_RE.test(name)) {
+    return { action: "exclude", reason: "non_bath_facility" };
+  }
+
   const uptae = item.BZSTAT_SE_NM ?? "";
-  const nonBathName = looksNonBath(item.BPLC_NM ?? "");
+  const nonBathName = looksNonBath(name);
 
   if (PUBLIC_BATH_UPTAE_RE.test(uptae)) {
     // 공동탕업(실제 욕탕 보유): 피트니스名이어도 진짜 탕 → 안 버림, 검수 보류.

@@ -8,7 +8,10 @@ import type {
   SaunaCategory,
   SaunaPhoto,
   BlogReview,
+  SaunaReview,
   ContentPolicy,
+  TempInfo,
+  TempStat,
 } from "./types";
 
 /**
@@ -24,9 +27,13 @@ import type {
 // thumbnail_source 는 정책 판단에만 쓰고 결과 객체엔 넣지 않는다(서버 전용).
 const COLS =
   "id, license_no, name, address, sido, sigungu, dong, location, status, closed_date, " +
-  "phone, open_date, created_at, is_jjimjilbang, is_hot_spring, is_24h, has_outdoor, " +
-  "sauna_room_temp, cold_bath_temp, has_sesin, sauna_kind, price, hours, thumbnail_url, " +
-  "thumbnail_source, editor_note, slug";
+  "phone, open_date, created_at, is_jjimjilbang, is_hot_spring, is_enzyme, is_sesin_shop, venue_type, is_24h, has_outdoor, " +
+  "sauna_room_temp, cold_bath_temp, " +
+  "sauna_room_temp_m, sauna_room_temp_f, cold_bath_temp_m, cold_bath_temp_f, " +
+  "has_sesin, sauna_kind, price, price_list, hours, hours_json, amenities, " +
+  "has_parking, parking_note, water_note, thumbnail_url, " +
+  "thumbnail_source, editor_note, ai_description, slug, " +
+  "rating_avg, rating_count";
 
 const OPERATING = "영업/정상";
 
@@ -48,18 +55,35 @@ function mapRow(r: any, images: ContentPolicy["images"]): Sauna {
     created_at: r.created_at,
     is_jjimjilbang: !!r.is_jjimjilbang,
     is_hot_spring: !!r.is_hot_spring,
+    is_enzyme: !!r.is_enzyme,
+    is_sesin_shop: !!r.is_sesin_shop,
+    venue_type: r.venue_type ?? "standalone",
     is_24h: !!r.is_24h,
     has_outdoor: !!r.has_outdoor,
     sauna_room_temp: r.sauna_room_temp ?? null,
     cold_bath_temp: r.cold_bath_temp ?? null,
+    sauna_room_temp_m: r.sauna_room_temp_m ?? null,
+    sauna_room_temp_f: r.sauna_room_temp_f ?? null,
+    cold_bath_temp_m: r.cold_bath_temp_m ?? null,
+    cold_bath_temp_f: r.cold_bath_temp_f ?? null,
     has_sesin: !!r.has_sesin,
     sauna_kind: r.sauna_kind ?? [],
     price: r.price ?? null,
+    price_list: r.price_list ?? null,
     hours: r.hours ?? null,
+    hours_json: r.hours_json ?? null,
+    amenities: r.amenities ?? null,
+    has_parking: r.has_parking ?? null,
+    parking_note: r.parking_note ?? null,
+    water_note: r.water_note ?? null,
     // 정책 적용: 표시 불가면 null. 항상 우리 Storage URL 만(원본URL은 select 안 함).
     thumbnail_url: resolvePhotoUrl(r.thumbnail_url, r.thumbnail_source, images),
     editor_note: r.editor_note ?? null,
+    ai_description: r.ai_description ?? null,
     slug: r.slug ?? "",
+    // numeric 은 PostgREST 에서 문자열로 옴 → Number 로 변환(없으면 null/0).
+    rating_avg: r.rating_avg != null ? Number(r.rating_avg) : null,
+    rating_count: r.rating_count ?? 0,
   };
 }
 
@@ -95,6 +119,36 @@ export async function getNearbySaunas(limit = 250): Promise<Sauna[]> {
   ]);
   if (error) throw error;
   return (data ?? []).map((r: any) => mapRow(r, images));
+}
+
+/**
+ * 내 주변 — Geolocation 좌표 기준 거리순(가까운 순). PostGIS RPC(saunas_nearby_v2).
+ * distance_km(파생) 채워서 반환. 0007 미적용 환경에선 RPC가 없어 throw → 호출부가 폴백.
+ */
+export async function getSaunasNearby(
+  lat: number,
+  lng: number,
+  radiusM = 8000,
+  limit = 120,
+): Promise<Sauna[]> {
+  const [{ data, error }, { images }] = await Promise.all([
+    supabasePublic.rpc("saunas_nearby_v2", {
+      lat,
+      lng,
+      radius_m: radiusM,
+      max_results: limit,
+    }),
+    getContentPolicy(),
+  ]);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => {
+    const s = mapRow(r, images);
+    s.distance_km =
+      typeof r.distance_m === "number"
+        ? Math.round(r.distance_m / 100) / 10 // 100m 단위 반올림 → 0.1km
+        : undefined;
+    return s;
+  });
 }
 
 /** 상세 — slug 로 단건. 폐업도 resolve(상세에서 '운영 종료' 표시). */
@@ -142,9 +196,18 @@ export async function getSaunasByCategory(
   limit = 600,
 ): Promise<Sauna[]> {
   let q = discoverBase();
-  if (cat === "hot_spring") q = q.eq("is_hot_spring", true);
-  else if (cat === "jjimjilbang") q = q.eq("is_jjimjilbang", true);
-  else q = q.eq("is_hot_spring", false).eq("is_jjimjilbang", false); // 순수 대중탕
+  // 효소찜질방·독립 세신샵은 별도 카테고리 → 찜질방/대중탕 목록에서 제외(중복 노출 방지).
+  if (cat === "sesin") q = q.eq("is_sesin_shop", true);
+  else if (cat === "enzyme") q = q.eq("is_enzyme", true);
+  else if (cat === "hot_spring") q = q.eq("is_hot_spring", true);
+  else if (cat === "jjimjilbang")
+    q = q.eq("is_jjimjilbang", true).eq("is_enzyme", false).eq("is_sesin_shop", false);
+  else
+    q = q // 순수 대중탕
+      .eq("is_hot_spring", false)
+      .eq("is_jjimjilbang", false)
+      .eq("is_enzyme", false)
+      .eq("is_sesin_shop", false);
   const [{ data, error }, { images }] = await Promise.all([
     q.order("open_date", { ascending: false, nullsFirst: false }).limit(limit),
     getContentPolicy(),
@@ -208,6 +271,7 @@ export async function getSaunaPhotos(saunaId: string): Promise<SaunaPhoto[]> {
     .select("id, url, source, width, height, sort_order")
     .eq("sauna_id", saunaId)
     .eq("is_active", true)
+    .is("review_id", null) // 후기 첨부 사진은 갤러리에서 제외(후기 카드 전용)
     .order("sort_order", { ascending: true });
   if (error) throw error;
   return (data ?? [])
@@ -245,6 +309,160 @@ export async function getBlogReviews(saunaId: string): Promise<BlogReview[]> {
     thumb_url: resolvePhotoUrl(r.thumb_url, null, images),
     posted_at: r.posted_at ?? null,
   }));
+}
+
+/* ── 방문자 후기(회원 작성) ── */
+
+/**
+ * 매장별 방문자 후기(최신순) — 닉네임 포함. SECURITY DEFINER RPC 로 profiles RLS 우회.
+ * 0013 미적용 환경에선 RPC가 없어 에러 → 빈 배열로 폴백(섹션이 비어도 안전).
+ */
+export async function getSaunaReviews(saunaId: string): Promise<SaunaReview[]> {
+  const { data, error } = await supabasePublic.rpc("sauna_reviews_for", {
+    p_sauna_id: saunaId,
+  });
+  if (error) return [];
+  const photosByReview = await getReviewPhotos(saunaId);
+  return (data ?? []).map((r: any) => ({
+    id: r.id,
+    saunaId,
+    userId: r.user_id,
+    rating: r.rating ?? 0,
+    body: r.body ?? null,
+    nickname: r.nickname ?? "사우나우님",
+    photos: photosByReview.get(r.id) ?? [],
+    created_at: r.created_at,
+  }));
+}
+
+/**
+ * 후기 첨부 사진(매장 단위) → review_id 로 묶은 맵. 이미지 킬스위치(images.show) 적용.
+ * review 사진은 source='user' 라 기존 read RLS(is_active+approved)로 anon 도 읽힌다.
+ */
+export async function getReviewPhotos(
+  saunaId: string,
+): Promise<Map<string, SaunaPhoto[]>> {
+  const map = new Map<string, SaunaPhoto[]>();
+  const { images } = await getContentPolicy();
+  if (!images.show) return map;
+  const { data, error } = await supabasePublic
+    .from("sauna_photos")
+    .select("id, url, width, height, review_id, created_at")
+    .eq("sauna_id", saunaId)
+    .eq("is_active", true)
+    .not("review_id", "is", null)
+    .order("created_at", { ascending: true });
+  if (error) return map;
+  for (const r of data ?? []) {
+    const photo: SaunaPhoto = {
+      id: (r as any).id,
+      url: (r as any).url,
+      width: (r as any).width ?? null,
+      height: (r as any).height ?? null,
+    };
+    const key = (r as any).review_id as string;
+    const arr = map.get(key);
+    if (arr) arr.push(photo);
+    else map.set(key, [photo]);
+  }
+  return map;
+}
+
+/* ── 온도 제보 집계(회원) ── */
+
+/** 크라우드 median 으로 표시 전환하는 최소 제보 수(미만이면 에디터 시딩값 유지). */
+const TEMP_CROWD_THRESHOLD = 2;
+
+/** 한 지표의 집계 상태 해석: crowd(임계치 이상) → seed → none. */
+function resolveTempStat(
+  median: number | null,
+  count: number,
+  latest: string | null,
+  seed: number | null,
+): TempStat {
+  const crowdValue =
+    median != null && count >= TEMP_CROWD_THRESHOLD ? Math.round(median) : null;
+  const displayValue = crowdValue ?? seed ?? null;
+  const source: TempStat["source"] =
+    crowdValue != null ? "crowd" : seed != null ? "editor" : "none";
+  return {
+    crowdValue,
+    seedValue: seed,
+    displayValue,
+    source,
+    reportCount: count,
+    latestReportAt: latest,
+  };
+}
+
+/**
+ * 매장 온도 정보(남/여 × 사우나실/냉탕) — 최근 30일 제보 median 자동 집계 + 에디터 시딩 폴백.
+ * 0014 미적용(RPC 없음)이면 all-seed 로 폴백(섹션이 비어도 안전, getSaunaReviews 패턴).
+ * seed 의 성별값(0012)이 없으면 공통값(sauna_room_temp/cold_bath_temp)으로 폴백.
+ */
+export async function getSaunaTempInfo(
+  saunaId: string,
+  seed: Sauna,
+): Promise<TempInfo> {
+  const seedFor = (
+    gender: "male" | "female",
+    metric: "sauna_room" | "cold_bath",
+  ): number | null => {
+    if (metric === "sauna_room") {
+      return (
+        (gender === "male" ? seed.sauna_room_temp_m : seed.sauna_room_temp_f) ??
+        seed.sauna_room_temp ??
+        null
+      );
+    }
+    return (
+      (gender === "male" ? seed.cold_bath_temp_m : seed.cold_bath_temp_f) ??
+      seed.cold_bath_temp ??
+      null
+    );
+  };
+
+  // RPC 행 → 빠른 조회 맵(`${gender}:${metric}`).
+  const agg = new Map<
+    string,
+    { median: number | null; count: number; latest: string | null }
+  >();
+  const { data, error } = await supabasePublic.rpc("sauna_temp_agg", {
+    p_sauna_id: saunaId,
+  });
+  if (!error) {
+    for (const r of (data ?? []) as any[]) {
+      agg.set(`${r.gender}:${r.metric}`, {
+        median: r.crowd_median != null ? Number(r.crowd_median) : null,
+        count: r.report_count ?? 0,
+        latest: r.latest_report_at ?? null,
+      });
+    }
+  }
+
+  const stat = (
+    gender: "male" | "female",
+    metric: "sauna_room" | "cold_bath",
+  ): TempStat => {
+    const a = agg.get(`${gender}:${metric}`);
+    return resolveTempStat(
+      a?.median ?? null,
+      a?.count ?? 0,
+      a?.latest ?? null,
+      seedFor(gender, metric),
+    );
+  };
+
+  return {
+    male: {
+      saunaRoom: stat("male", "sauna_room"),
+      coldBath: stat("male", "cold_bath"),
+    },
+    female: {
+      saunaRoom: stat("female", "sauna_room"),
+      coldBath: stat("female", "cold_bath"),
+    },
+  };
 }
 
 /* ── 큐레이션·매거진(현재 데이터 없음 → 빈 배열, 섹션 숨김) ── */
@@ -299,4 +517,28 @@ export async function getArticles(limit?: number): Promise<Article[]> {
     published_at: a.published_at ?? "",
     is_published: a.is_published,
   }));
+}
+
+export async function getArticleBySlug(slug: string): Promise<Article | null> {
+  const { data, error } = await supabasePublic
+    .from("articles")
+    .select(
+      "id, title, summary, body, thumbnail_url, category, slug, published_at, is_published",
+    )
+    .eq("slug", slug)
+    .eq("is_published", true)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    id: data.id,
+    title: data.title,
+    summary: data.summary ?? "",
+    body: data.body ?? "",
+    thumbnail_url: data.thumbnail_url ?? null,
+    category: data.category,
+    slug: data.slug ?? "",
+    published_at: data.published_at ?? "",
+    is_published: data.is_published,
+  };
 }

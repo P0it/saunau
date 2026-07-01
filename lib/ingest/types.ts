@@ -2,6 +2,7 @@
  * 공공데이터 적재 파이프라인 공용 타입.
  * 목욕장업 API(행정안전부 1741000) 응답은 영문 코드 필드명을 쓴다.
  */
+import type { VenueType } from "../data/types";
 
 /** 목욕장업 /info 응답의 item 1건 (사용하는 필드 위주, 값은 string | null). */
 export interface BathApiItem {
@@ -53,6 +54,8 @@ export interface SaunaUpsertRow {
   open_date: string | null; // YYYY-MM-DD
   is_jjimjilbang: boolean;
   is_hot_spring: boolean;
+  is_enzyme: boolean; // 효소(발효) 찜질방 — 별도 카테고리
+  venue_type: VenueType; // 장소 유형(탕 종류와 직교): 독립/숙박형/커뮤니티형
   is_24h: boolean;
   needs_review: boolean; // 노출 보류(강한 탕 라이선스+피트니스名)
   slug: string;

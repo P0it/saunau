@@ -4,11 +4,32 @@
  * → upsert 시 건드리지 않아 에디터 입력값이 보존된다.
  */
 import type { BathApiItem, SaunaUpsertRow } from "./types";
+import type { VenueType } from "../data/types";
 import { tmToWgs84, toEwkt } from "./projection";
 
 const JJIMJIL_RE = /찜질|불가마|한증|숯가마|맥반석/;
 const HOT_SPRING_RE = /온천|해수|유황|약수/;
 const H24_RE = /24시|24h|24時/i;
+// 효소(발효) 찜질방 — 일반 찜질방과 별도 카테고리로 노출.
+// ※ 목욕장업 상호명 기반의 "명백한" 신호만. 브랜드(테르엔·따숨 등 효소 없는 상호)는
+//    목욕장업에 대개 없으므로 네이버 수집(scripts/crawl-naver-enzyme.ts)이 담당한다.
+const ENZYME_RE = /효소|발효/;
+
+// 장소 유형(venue_type) 분류 신호 — supabase/migrations/0010·0024 백필과 동일하게 유지할 것.
+// 숙박형: 호텔·리조트·숙소 부속(상호 또는 주소 건물명). 브랜드(루프 사우나/아늑) 포함.
+const LODGING_RE = /호텔|모텔|리조트|레지던스|게스트|호스텔|콘도|펜션|루프\s?사우나|아늑/;
+const LODGING_ADDR_RE = /호텔|모텔|리조트|레지던스|게스트|호스텔|콘도|펜션/;
+// 커뮤니티형(라벨: 체육·복지시설): 휘트니스·주민체육·복지시설 부속(상호 기준).
+// 스포츠센터·체력단련·청소년수련·레포츠는 체육센터/체육관 표기에서 새던 케이스를 보강.
+const COMMUNITY_RE =
+  /체육센터|주민센터|문화센터|복지관|복지센터|체육관|생활관|휘트니스|피트니스|헬스|버핏그라운드|스포츠센터|체력단련|청소년수련|레포츠/;
+
+/** 장소 유형 분류 — 숙박형 우선(호텔 부속 피트니스/스파는 숙박형으로 본다). */
+function classifyVenue(name: string, address: string | null): VenueType {
+  if (LODGING_RE.test(name) || LODGING_ADDR_RE.test(address ?? "")) return "lodging";
+  if (COMMUNITY_RE.test(name)) return "community";
+  return "standalone";
+}
 
 /** 지번/도로명 주소에서 sido·sigungu·dong 분해. */
 function parseRegion(item: BathApiItem): {
@@ -53,6 +74,7 @@ export function mapBathToSauna(item: BathApiItem, needsReview = false): SaunaUps
   const sweat = (item.SWEATRM_YN ?? "").trim() === "Y";
   const bzstat = item.BZSTAT_SE_NM ?? "";
 
+  const is_enzyme = ENZYME_RE.test(name);
   const is_jjimjilbang =
     sweat || /찜질|한증/.test(bzstat) || JJIMJIL_RE.test(name);
   const is_hot_spring = HOT_SPRING_RE.test(name) || HOT_SPRING_RE.test(address ?? "");
@@ -80,6 +102,8 @@ export function mapBathToSauna(item: BathApiItem, needsReview = false): SaunaUps
     open_date,
     is_jjimjilbang,
     is_hot_spring,
+    is_enzyme,
+    venue_type: classifyVenue(name, address),
     is_24h,
     needs_review: needsReview,
     slug: base,
