@@ -11,15 +11,29 @@
     "lint": "eslint",
     "load:initial": "tsx scripts/load-initial.ts",
     "crawl:naver": "tsx scripts/crawl-naver.ts",
+    "crawl:naver-info": "tsx scripts/crawl-naver-info.ts",
+    "crawl:naver-hours": "tsx scripts/crawl-naver-hours.ts",
+    "crawl:naver-enzyme": "tsx scripts/crawl-naver-enzyme.ts",
+    "crawl:naver-sesin": "tsx scripts/crawl-naver-sesin.ts",
+    "derive:price": "tsx scripts/derive-price.ts",
+    "crawl:google": "tsx scripts/crawl-google.ts",
+    "crawl:website": "tsx scripts/crawl-website.ts",
+    "describe": "tsx scripts/describe.ts",
+    "import:articles": "tsx scripts/import-articles.ts",
     "flag": "tsx scripts/flag.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
+    "gray-matter": "^4.0.3",
     "lucide-react": "^1.21.0",
     "next": "16.2.9",
     "proj4": "^2.20.9",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "sharp": "^0.35.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
