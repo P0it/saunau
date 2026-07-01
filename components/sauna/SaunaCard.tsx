@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { Flame } from "lucide-react";
 import type { Sauna } from "@/lib/data/types";
 import { SaunaImage } from "./SaunaImage";
 import { TempHeadline } from "./TempHeadline";
 import { TypeBadge } from "./TypeBadge";
-import { FavoriteHeart } from "./FavoriteHeart";
+import { FavoriteScrubber } from "./FavoriteScrubber";
 
 export function saunaHref(s: Sauna) {
   return `/sauna/${encodeURIComponent(s.sido)}/${s.slug}`;
@@ -32,6 +33,8 @@ function specLine(s: Sauna): string {
 export function SaunaCard({ sauna }: { sauna: Sauna }) {
   const spec = specLine(sauna);
   const closed = isSaunaClosed(sauna);
+  // 평점은 후기가 없어도 항상 노출(빈 불꽃 + 0.0 + (0)). 괄호 안은 실제 후기 수.
+  const rated = sauna.rating_avg != null && (sauna.rating_count ?? 0) > 0;
 
   return (
     <Link
@@ -55,41 +58,81 @@ export function SaunaCard({ sauna }: { sauna: Sauna }) {
           </div>
         )}
         <div className="absolute right-[10px] top-[10px]">
-          <FavoriteHeart saunaId={sauna.id} />
+          <FavoriteScrubber saunaId={sauna.id} />
         </div>
       </div>
 
-      <div className={`p-[14px] ${closed ? "opacity-70" : ""}`}>
-        <div className="flex items-center gap-[7px]">
-          <span className="text-[16px] font-semibold tracking-[-0.01em] text-ink">
-            {sauna.name}
-          </span>
-          <TypeBadge sauna={sauna} />
-        </div>
-
+      <div className={`p-[16px] ${closed ? "opacity-70" : ""}`}>
         {closed ? (
-          <p className="mt-[8px] text-[13px] font-medium leading-[1.5] text-muted">
-            아쉽지만 문을 닫았어요…
-            <br />
-            <span className="text-[12px] text-dot">
-              다음에 더 좋은 곳에서 만나요
-            </span>
-          </p>
+          <>
+            <div className="flex items-center gap-[7px]">
+              <span className="text-[16px] font-semibold tracking-[-0.01em] text-ink">
+                {sauna.name}
+              </span>
+              <span className="flex-none">
+                <TypeBadge sauna={sauna} />
+              </span>
+            </div>
+            <p className="mt-[10px] text-[13px] font-medium leading-[1.5] text-muted">
+              아쉽지만 문을 닫았어요…
+              <br />
+              <span className="text-[12px] text-dot">
+                다음에 더 좋은 곳에서 만나요
+              </span>
+            </p>
+          </>
         ) : (
-          <div className="mt-[8px]">
-            <TempHeadline
-              saunaTemp={sauna.sauna_room_temp}
-              coldTemp={sauna.cold_bath_temp}
-            />
+          <div className="flex items-stretch justify-between gap-[12px]">
+            {/* 좌측 정보 스택 — 이름 → 평점 → 위치(거리·동·스펙) */}
+            <div className="flex min-w-0 flex-1 flex-col">
+              <div className="flex min-w-0 items-center gap-[7px]">
+                <span className="truncate text-[16px] font-semibold tracking-[-0.01em] text-ink">
+                  {sauna.name}
+                </span>
+                <span className="flex-none">
+                  <TypeBadge sauna={sauna} />
+                </span>
+              </div>
+
+              {/* 평점 — 한 줄 */}
+              <div className="mt-[10px] flex items-center gap-[3px] text-[12px] tabular-nums">
+                <Flame
+                  size={12}
+                  className={rated ? "text-hot" : ""}
+                  fill={rated ? "currentColor" : "none"}
+                  style={rated ? undefined : { color: "#D8D3CC" }}
+                  aria-hidden
+                />
+                <span
+                  className={
+                    rated ? "font-semibold text-ink" : "font-medium text-dot"
+                  }
+                >
+                  {(sauna.rating_avg ?? 0).toFixed(1)}
+                </span>
+                <span className="font-medium text-dot">
+                  ({sauna.rating_count ?? 0})
+                </span>
+              </div>
+
+              {/* 위치 — 한 줄 (거리는 위치 권한 있을 때 표시) */}
+              <div className="mt-[6px] truncate text-[12px] font-medium text-muted tabular-nums">
+                {sauna.distance_km != null && <>{sauna.distance_km}km · </>}
+                {sauna.dong}
+                {spec && <span className="text-dot"> · </span>}
+                {spec}
+              </div>
+            </div>
+
+            {/* 우측 하단 온도 — 기존 서비스의 '금액' 자리 */}
+            <div className="flex flex-none items-end">
+              <TempHeadline
+                saunaTemp={sauna.sauna_room_temp}
+                coldTemp={sauna.cold_bath_temp}
+              />
+            </div>
           </div>
         )}
-
-        <div className="mt-[7px] text-[12px] font-medium text-muted tabular-nums">
-          {sauna.distance_km != null && <>{sauna.distance_km}km · </>}
-          {sauna.dong}
-          {spec && !closed && <span className="text-dot"> · </span>}
-          {!closed && spec}
-        </div>
       </div>
     </Link>
   );

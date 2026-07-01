@@ -7,13 +7,20 @@ import { ChevronLeft } from "lucide-react";
 export function ScreenHeader({
   title,
   right,
+  className,
 }: {
   title?: string;
   right?: React.ReactNode;
+  /** 헤더 배경 등 오버라이드(기본: bg-frame/90). */
+  className?: string;
 }) {
   const router = useRouter();
   return (
-    <header className="sticky top-0 z-20 flex h-[52px] flex-none items-center justify-between border-b border-line-soft bg-frame/90 px-[8px] backdrop-blur">
+    <header
+      className={`sticky top-0 z-20 flex h-[52px] flex-none items-center justify-between border-b border-line-soft px-[8px] backdrop-blur ${
+        className ?? "bg-frame/90"
+      }`}
+    >
       <button
         type="button"
         aria-label="뒤로"

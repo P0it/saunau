@@ -1,39 +1,31 @@
 import Link from "next/link";
-import { MapPin, ChevronRight } from "lucide-react";
-import { getOpenCount, getNewOpenings, getArticles } from "@/lib/data/queries";
-import type { ArticleCategory } from "@/lib/data/types";
+import { ChevronRight } from "lucide-react";
+import { getNewOpenings, getArticles } from "@/lib/data/queries";
 import { HomeHeader } from "@/components/home/HomeHeader";
+import { ScrollRow } from "@/components/layout/ScrollRow";
+import { NearbyMapLink } from "@/components/home/NearbyMapLink";
 import { RecentPeek } from "@/components/home/RecentPeek";
 import { TempHeadline } from "@/components/sauna/TempHeadline";
 import { saunaHref } from "@/components/sauna/SaunaCard";
+import { SaunaImage } from "@/components/sauna/SaunaImage";
+import { ArticleThumb } from "@/components/magazine/ArticleThumb";
 import {
-  FeaturedMapScene,
   TrendingTubIllust,
   HotSaunaRoomIllust,
   BathhouseIllust,
   JjimjilbangIllust,
   HotSpringIllust,
   Night24Scene,
-  OutdoorScene,
   SesinScene,
-  ArticleEfficacyThumb,
-  ArticleNewsThumb,
-  ArticleGuideThumb,
+  SandBathScene,
 } from "@/components/illustrations";
-
-const ARTICLE_THUMB: Record<ArticleCategory, () => React.ReactNode> = {
-  효능: ArticleEfficacyThumb,
-  소식: ArticleNewsThumb,
-  가이드: ArticleGuideThumb,
-};
 
 export const dynamic = "force-dynamic"; // 동기화된 DB를 항상 최신으로
 
 export default async function HomePage() {
-  const [openCount, newOpenings, articles] = await Promise.all([
-    getOpenCount(),
+  const [newOpenings, articles] = await Promise.all([
     getNewOpenings(6),
-    getArticles(3),
+    getArticles(8),
   ]);
 
   return (
@@ -41,27 +33,8 @@ export default async function HomePage() {
       <HomeHeader />
 
       <div className="flex flex-col gap-[12px] px-[16px] pb-[18px] pt-[4px]">
-        {/* featured — 내 주변 사우나 */}
-        <Link
-          href="/map"
-          className="relative h-[160px] overflow-hidden rounded-[22px] bg-card shadow-[0_2px_12px_rgba(0,0,0,0.05)]"
-        >
-          <div className="absolute inset-y-0 right-0 z-0 w-[190px]">
-            <FeaturedMapScene />
-            <div className="absolute inset-y-0 left-0 w-[48px] bg-gradient-to-r from-white to-transparent" />
-          </div>
-          <div className="relative z-[2] p-[20px]">
-            <span className="inline-flex items-center gap-[4px] rounded-full bg-brand px-[11px] py-[5px] text-[11px] font-bold tabular-nums text-white">
-              <MapPin size={12} />내 주변 {openCount}곳 영업중
-            </span>
-            <div className="mt-[13px] text-[20px] font-extrabold tracking-[-0.025em] text-ink">
-              내 주변 사우나
-            </div>
-            <div className="mt-[5px] text-[13px] font-medium text-muted">
-              지도로 한눈에 보기
-            </div>
-          </div>
-        </Link>
+        {/* featured — 내 주변 사우나 (클릭 시 위치 동의 → 내 위치에서 지도 열기) */}
+        <NearbyMapLink />
 
         {/* two-card row */}
         <div className="flex gap-[12px]">
@@ -107,7 +80,7 @@ export default async function HomePage() {
             </div>
           </CategoryCard>
           <CategoryCard href="/list?type=jjimjilbang" label="찜질방">
-            <div className="absolute bottom-[6px] right-[2px]">
+            <div className="absolute bottom-[1px] right-[2px]">
               <JjimjilbangIllust />
             </div>
           </CategoryCard>
@@ -122,7 +95,7 @@ export default async function HomePage() {
         <div className="mx-[2px] mb-[8px] mt-[10px] text-[18px] font-extrabold tracking-[-0.02em] text-ink">
           테마별 사우나
         </div>
-        <div className="no-scrollbar -mx-[16px] flex gap-[12px] overflow-x-auto px-[16px] pb-[4px] pt-[2px]">
+        <ScrollRow className="no-scrollbar -mx-[16px] flex gap-[12px] overflow-x-auto px-[16px] pb-[4px] pt-[2px]">
           <ThemeCard
             href="/list?filter=24h"
             bg="#1A1B33"
@@ -134,15 +107,17 @@ export default async function HomePage() {
             <Night24Scene />
           </ThemeCard>
           <ThemeCard
-            href="/list?filter=outdoor"
-            bg="#CDE7EC"
-            title="노천 명소"
-            titleColor="#1F3A2A"
-            sub="탁 트인 풍경의 노천탕"
-            subColor="#56715F"
+            href="/list?type=enzyme"
+            bg="#F6E7C8"
+            title="효소찜질방"
+            titleColor="#5B4426"
+            sub="모래에 파묻는 발효 온열"
+            subColor="#A98A57"
           >
-            <OutdoorScene />
+            <SandBathScene />
           </ThemeCard>
+          {/* 노천 명소 테마 — has_outdoor 데이터 소스가 없어(인제스트 미기록)
+              항상 빈 목록 → 데이터 채워지기 전까지 숨김. 되살릴 땐 OutdoorScene 재사용. */}
           <ThemeCard
             href="/list?filter=sesin"
             bg="#E3F4F4"
@@ -153,7 +128,7 @@ export default async function HomePage() {
           >
             <SesinScene />
           </ThemeCard>
-        </div>
+        </ScrollRow>
 
         {/* 새로 오픈 */}
         {newOpenings.length > 0 && (
@@ -166,13 +141,25 @@ export default async function HomePage() {
                 <ChevronRight size={20} className="text-[#B0AAA1]" />
               </Link>
             </div>
-            <div className="no-scrollbar flex gap-[14px] overflow-x-auto px-[2px] pb-[30px]">
+            <ScrollRow className="no-scrollbar flex gap-[14px] overflow-x-auto px-[2px] pb-[30px]">
               {newOpenings.map((s) => (
                 <Link key={s.id} href={saunaHref(s)} className="w-[172px] flex-none">
-                  <div className="h-[118px] overflow-hidden rounded-[16px] bg-[#EEF0F2]" />
-                  <div className="mt-[10px] text-[15px] font-semibold text-ink">
+                  <div className="relative h-[118px] overflow-hidden rounded-[16px] bg-[#EEF0F2]">
+                    <SaunaImage
+                      src={s.thumbnail_url}
+                      alt={s.name}
+                      sizes="172px"
+                      iconSize={24}
+                    />
+                  </div>
+                  <div className="mt-[10px] line-clamp-2 h-[40px] text-[15px] font-semibold leading-[1.32] text-ink">
                     {s.name}
                   </div>
+                  {s.open_date && (
+                    <div className="mt-[4px] text-[12px] font-medium text-[#B0AAA1]">
+                      {s.open_date.slice(0, 10).replace(/-/g, ".")} 오픈
+                    </div>
+                  )}
                   <div className="mt-[6px]">
                     <TempHeadline
                       saunaTemp={s.sauna_room_temp}
@@ -181,45 +168,46 @@ export default async function HomePage() {
                   </div>
                 </Link>
               ))}
-            </div>
+            </ScrollRow>
           </>
         )}
 
         {/* 읽을거리 */}
         {articles.length > 0 && (
           <>
-            <div className="px-[2px] pb-[14px]">
+            <div className="flex items-center justify-between px-[2px] pb-[14px]">
               <span className="text-[18px] font-extrabold tracking-[-0.02em] text-ink">
                 읽을거리
               </span>
+              <Link href="/feed" aria-label="읽을거리 더보기">
+                <ChevronRight size={20} className="text-[#B0AAA1]" />
+              </Link>
             </div>
-            <div className="flex flex-col gap-[20px] px-[2px] pb-[20px]">
-              {articles.map((a) => {
-                const Thumb = ARTICLE_THUMB[a.category];
-                return (
-                  <Link
-                    key={a.id}
-                    href={`/magazine/${a.slug}`}
-                    className="flex gap-[14px]"
-                  >
-                    <div className="relative h-[78px] w-[104px] flex-none overflow-hidden rounded-[14px]">
-                      <Thumb />
+            <ScrollRow className="no-scrollbar flex gap-[14px] overflow-x-auto px-[2px] pb-[24px]">
+              {articles.map((a) => (
+                <Link
+                  key={a.id}
+                  href={`/feed/${a.slug}`}
+                  className="w-[200px] flex-none"
+                >
+                  <ArticleThumb
+                    slug={a.slug}
+                    thumbnailUrl={a.thumbnail_url}
+                    alt={a.title}
+                    sizes="200px"
+                    className="h-[120px] rounded-[16px]"
+                  />
+                  <div className="mt-[10px] line-clamp-2 h-[42px] text-[15px] font-semibold leading-[1.35] text-ink text-pretty">
+                    {a.title}
+                  </div>
+                  {a.published_at && (
+                    <div className="mt-[4px] text-[11px] font-medium text-[#B0AAA1]">
+                      {a.published_at.slice(0, 10).replace(/-/g, ".")}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[11px] font-semibold text-brand">
-                        사우나 {a.category}
-                      </div>
-                      <div className="mt-[5px] text-[15px] font-semibold leading-[1.35] text-ink text-pretty">
-                        {a.title}
-                      </div>
-                      <div className="mt-[5px] text-[12px] font-normal text-muted">
-                        {a.summary}
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+                  )}
+                </Link>
+              ))}
+            </ScrollRow>
           </>
         )}
 

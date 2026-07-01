@@ -2,10 +2,17 @@
 
 import { useMemo } from "react";
 import { X, Flame, Snowflake } from "lucide-react";
-import { primaryCategory, type Sauna, type SaunaCategory } from "@/lib/data/types";
+import {
+  inCategory,
+  VENUE_LABEL,
+  type Sauna,
+  type SaunaCategory,
+  type VenueType,
+} from "@/lib/data/types";
 
 export interface SheetFilters {
   types: SaunaCategory[];
+  venues: VenueType[]; // 장소 유형: 독립/숙박형/커뮤니티
   kinds: string[]; // 습식/건식/한증막
   sesin: "any" | "yes";
   open: "any" | "24h";
@@ -15,6 +22,7 @@ export interface SheetFilters {
 
 export const DEFAULT_FILTERS: SheetFilters = {
   types: [],
+  venues: [],
   kinds: [],
   sesin: "any",
   open: "any",
@@ -23,14 +31,20 @@ export const DEFAULT_FILTERS: SheetFilters = {
 };
 
 const TYPE_CHIPS: { value: SaunaCategory; label: string }[] = [
-  { value: "hot_spring", label: "온천" },
-  { value: "bathhouse", label: "사우나" },
+  { value: "bathhouse", label: "목욕탕" },
   { value: "jjimjilbang", label: "찜질방" },
+  { value: "hot_spring", label: "온천" },
+  { value: "enzyme", label: "효소찜질방" },
 ];
-const KIND_CHIPS = ["습식", "건식", "한증막"];
+const VENUE_CHIPS: { value: VenueType; label: string }[] = [
+  { value: "standalone", label: VENUE_LABEL.standalone },
+  { value: "lodging", label: VENUE_LABEL.lodging },
+  { value: "community", label: VENUE_LABEL.community },
+];
 
 export function matchesFilters(s: Sauna, f: SheetFilters): boolean {
-  if (f.types.length && !f.types.includes(primaryCategory(s))) return false;
+  if (f.types.length && !f.types.some((t) => inCategory(s, t))) return false;
+  if (f.venues.length && !f.venues.includes(s.venue_type)) return false;
   if (f.kinds.length && !f.kinds.some((k) => s.sauna_kind.includes(k))) return false;
   if (f.sesin === "yes" && !s.has_sesin) return false;
   if (f.open === "24h" && !s.is_24h) return false;
@@ -52,6 +66,7 @@ export function FilterSheet({
   onApply,
   onClose,
   candidates,
+  variant = "sheet",
 }: {
   open: boolean;
   value: SheetFilters;
@@ -59,12 +74,15 @@ export function FilterSheet({
   onApply: () => void;
   onClose: () => void;
   candidates: Sauna[];
+  /** sheet=모바일 하단 시트(기본) · panel=좌측 도킹 패널(지도 데스크톱) */
+  variant?: "sheet" | "panel";
 }) {
   const count = useMemo(
     () => candidates.filter((s) => matchesFilters(s, value)).length,
     [value, candidates],
   );
   if (!open) return null;
+  const isPanel = variant === "panel";
 
   const toggleType = (t: SaunaCategory) =>
     onChange({
@@ -73,28 +91,37 @@ export function FilterSheet({
         ? value.types.filter((x) => x !== t)
         : [...value.types, t],
     });
-  const toggleKind = (k: string) =>
+  const toggleVenue = (v: VenueType) =>
     onChange({
       ...value,
-      kinds: value.kinds.includes(k)
-        ? value.kinds.filter((x) => x !== k)
-        : [...value.kinds, k],
+      venues: value.venues.includes(v)
+        ? value.venues.filter((x) => x !== v)
+        : [...value.venues, v],
     });
-
   return (
-    <div className="fixed inset-0 z-50 mx-auto flex max-w-[430px] flex-col justify-end bg-[rgba(20,18,16,.42)]">
+    <div
+      className={
+        isPanel
+          ? "fixed inset-0 z-[60]"
+          : "fixed inset-0 z-50 mx-auto flex max-w-[430px] flex-col justify-end bg-[rgba(20,18,16,.42)]"
+      }
+    >
+      <div className="absolute inset-0" onClick={onClose} aria-hidden />
       <div
-        className="absolute inset-0"
-        onClick={onClose}
-        aria-hidden
-      />
-      <div className="relative flex max-h-[82dvh] flex-col overflow-hidden rounded-t-[22px] bg-card">
+        className={
+          isPanel
+            ? "absolute inset-y-0 left-0 flex w-full max-w-[400px] flex-col overflow-hidden bg-card shadow-[6px_0_24px_rgba(0,0,0,0.18)]"
+            : "relative flex max-h-[82dvh] flex-col overflow-hidden rounded-t-[22px] bg-card"
+        }
+      >
         {/* handle + header */}
         <div className="flex-none">
-          <div className="flex justify-center pb-[4px] pt-[10px]">
-            <div className="h-[4px] w-[38px] rounded-full bg-[#E2DFD9]" />
-          </div>
-          <div className="flex items-center justify-between px-[20px] pb-[12px] pt-[8px]">
+          {!isPanel && (
+            <div className="flex justify-center pb-[4px] pt-[10px]">
+              <div className="h-[4px] w-[38px] rounded-full bg-[#E2DFD9]" />
+            </div>
+          )}
+          <div className="flex items-center justify-between px-[20px] pb-[12px] pt-[14px]">
             <button
               type="button"
               onClick={() => onChange(DEFAULT_FILTERS)}
@@ -124,18 +151,22 @@ export function FilterSheet({
             </div>
           </Section>
 
-          <Section title="사우나 유형">
+          <Section title="장소 유형" hint="중복 선택 가능">
             <div className="flex flex-wrap gap-[8px]">
-              {KIND_CHIPS.map((k) => (
+              {VENUE_CHIPS.map((c) => (
                 <PillToggle
-                  key={k}
-                  label={k}
-                  active={value.kinds.includes(k)}
-                  onClick={() => toggleKind(k)}
+                  key={c.value}
+                  label={c.label}
+                  active={value.venues.includes(c.value)}
+                  onClick={() => toggleVenue(c.value)}
                 />
               ))}
             </div>
           </Section>
+
+          {/* 사우나 유형(습식/건식/한증막) 필터는 sauna_kind 데이터가
+              인제스트에서 채워지지 않아 항상 무매치 → 소스 생기기 전까지 숨김.
+              matchesFilters()의 kinds 로직·타입은 유지(kinds는 항상 []). */}
 
           <div className="mt-[24px] flex gap-[20px]">
             <div className="flex-1">
@@ -256,6 +287,13 @@ function RangeRow({
   value: [number, number];
   onChange: (v: [number, number]) => void;
 }) {
+  // 손잡이 지름 18px → 반지름 9px. 네이티브 range 손잡이 중심은 양끝에서
+  // 9px 안쪽까지만 이동하므로, 채움/레일도 그 이동 범위에 맞춰 배치해야
+  // 손잡이와 어긋나지 않는다. (fr: 0~1 비율)
+  const THUMB = 18;
+  const fr = (n: number) => (n - min) / (max - min);
+  const atLeft = (n: number) => `calc(9px + ${fr(n)} * (100% - ${THUMB}px))`;
+  const atRight = (n: number) => `calc(9px + ${1 - fr(n)} * (100% - ${THUMB}px))`;
   return (
     <div className="mb-[18px]">
       <div className="mb-[9px] flex items-center justify-between">
@@ -270,10 +308,24 @@ function RangeRow({
           className="text-[13px] font-bold tabular-nums"
           style={{ color }}
         >
-          {value[0]}° – {value[1]}°
+          {value[0]}° ~ {value[1]}°
         </span>
       </div>
-      <div className="flex items-center gap-[10px]">
+      <div
+        className="dual-range relative h-[24px]"
+        style={{ "--range": color } as React.CSSProperties}
+      >
+        {/* 기본 트랙 — 손잡이 이동 범위(양끝 9px 안쪽)에 맞춤 */}
+        <div className="pointer-events-none absolute top-1/2 h-[4px] -translate-y-1/2 rounded-full bg-[#EBEBEE]" style={{ left: "9px", right: "9px" }} />
+        {/* 선택 구간 채움(두 손잡이 사이) */}
+        <div
+          className="pointer-events-none absolute top-1/2 h-[4px] -translate-y-1/2 rounded-full"
+          style={{
+            left: atLeft(value[0]),
+            right: atRight(value[1]),
+            background: color,
+          }}
+        />
         <input
           type="range"
           min={min}
@@ -282,8 +334,8 @@ function RangeRow({
           onChange={(e) =>
             onChange([Math.min(Number(e.target.value), value[1]), value[1]])
           }
-          className="h-[4px] flex-1 cursor-pointer appearance-none rounded-full bg-[#EBEBEE]"
-          style={{ accentColor: color }}
+          aria-label={`${label} 최저 온도`}
+          style={{ zIndex: value[0] >= value[1] ? 5 : 3 }}
         />
         <input
           type="range"
@@ -293,8 +345,8 @@ function RangeRow({
           onChange={(e) =>
             onChange([value[0], Math.max(Number(e.target.value), value[0])])
           }
-          className="h-[4px] flex-1 cursor-pointer appearance-none rounded-full bg-[#EBEBEE]"
-          style={{ accentColor: color }}
+          aria-label={`${label} 최고 온도`}
+          style={{ zIndex: 4 }}
         />
       </div>
     </div>

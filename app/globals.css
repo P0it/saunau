@@ -50,33 +50,146 @@ body {
 }
 
 /*
- * 사우나 열기(heat) — 지도에서 선택된 카드/핀에 적용.
- * 딱딱한 빨강 테두리 대신, 사우나실 온기가 피어오르듯 따뜻한 글로우가 은은히 맥동.
+ * 이중 온도 슬라이더(필터) — 한 트랙 위에 두 손잡이를 겹쳐 올린다.
+ * input 자체는 클릭 통과(pointer-events:none)시키고, 손잡이(thumb)만 잡히게 해
+ * 두 값을 각각 드래그. 손잡이 색은 컨테이너의 --range 변수(사우나=빨강/냉탕=파랑).
  */
-@keyframes saunaHeat {
+.dual-range input[type="range"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  background: transparent;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.dual-range input[type="range"]::-webkit-slider-runnable-track {
+  background: transparent;
+  border: none;
+}
+.dual-range input[type="range"]::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+/* Gecko 는 값 이하 구간을 accent(파랑)로 채우므로 명시적으로 지운다. */
+.dual-range input[type="range"]::-moz-range-progress {
+  background: transparent;
+}
+.dual-range input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  pointer-events: auto;
+  height: 18px;
+  width: 18px;
+  border-radius: 9999px;
+  background: var(--range, #f5402c);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.dual-range input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  height: 18px;
+  width: 18px;
+  border: 2px solid #fff;
+  border-radius: 9999px;
+  background: var(--range, #f5402c);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+/*
+ * 핵심 수정: Lightning CSS(빌드 미니파이)가 "-webkit-appearance:none; appearance:none;"
+ * 를 unprefixed 로 병합하며 -webkit- 프리픽스를 떨궜다. 그러나 ::-webkit-slider-thumb 는
+ * -webkit-appearance:none 이 있어야만 네이티브 손잡이가 사라진다(unprefixed 만으론 부족).
+ * → 구형/모바일 웹뷰에서 파란 네이티브 슬라이더가 그대로 새어나왔다.
+ * @supports 가드 안에 두면 프리픽스가 미니파이 후에도 보존된다(프리플라이트가 쓰는 패턴).
+ */
+@supports (-webkit-appearance: none) {
+  .dual-range input[type="range"] {
+    -webkit-appearance: none;
+  }
+  .dual-range input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+  }
+}
+
+/*
+ * 선택된 카드/핀 — 흐릿한 빨강 오라 대신, 깔끔한 빨강 테두리 + 담백한 그림자만.
+ */
+.heat-focus {
+  box-shadow:
+    0 0 0 1.5px #f5402c,
+    0 4px 18px rgba(0, 0, 0, 0.16);
+}
+
+/*
+ * 앱 첫 로딩 스플래시 — 워드마크가 살짝 떠오르고, 위로 김(steam)이 피어오른다.
+ * 일러스트의 김 모티프(brand vermilion 곡선)를 재사용해 사우나 분위기를 전달.
+ */
+@keyframes splash-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes splash-steam {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scaleY(0.7);
+  }
+  35% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px) scaleY(1.15);
+  }
+}
+
+/* 워드마크 열기 일렁임 — 살짝 떠오르며 흐려지고 따뜻한 글로우가 번진다. */
+@keyframes splash-heat {
   0%,
   100% {
-    box-shadow:
-      0 0 0 1px rgba(245, 64, 44, 0.25),
-      0 4px 18px rgba(245, 64, 44, 0.18),
-      0 0 26px rgba(255, 110, 60, 0.2);
+    transform: translateY(0) scaleY(1);
+    filter: blur(0) drop-shadow(0 0 0 rgba(255, 214, 170, 0));
   }
   50% {
-    box-shadow:
-      0 0 0 1px rgba(245, 64, 44, 0.4),
-      0 8px 26px rgba(245, 64, 44, 0.34),
-      0 0 44px rgba(255, 110, 60, 0.34);
+    transform: translateY(-1.5px) scaleY(1.022);
+    filter: blur(0.5px) drop-shadow(0 2px 12px rgba(255, 214, 170, 0.5));
   }
 }
-.heat-focus {
-  animation: saunaHeat 2s ease-in-out infinite;
+
+.splash-wordmark {
+  animation: splash-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+.splash-heat {
+  animation: splash-heat 2.6s ease-in-out infinite;
+}
+
+.splash-steam path {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: splash-steam 1.8s ease-in-out infinite;
+}
+.splash-steam path:nth-child(2) {
+  animation-delay: 0.3s;
+}
+.splash-steam path:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .heat-focus {
+  .splash-wordmark,
+  .splash-steam path,
+  .splash-heat {
     animation: none;
-    box-shadow:
-      0 0 0 1px rgba(245, 64, 44, 0.3),
-      0 6px 22px rgba(245, 64, 44, 0.28),
-      0 0 32px rgba(255, 110, 60, 0.26);
   }
 }

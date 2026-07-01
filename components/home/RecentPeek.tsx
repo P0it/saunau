@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Waves, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { Sauna } from "@/lib/data/types";
 import { useRecentIds } from "@/lib/recent";
 import { getSaunasByIds } from "@/lib/data/queries";
 import { TempHeadline } from "@/components/sauna/TempHeadline";
 import { saunaHref } from "@/components/sauna/SaunaCard";
+import { SaunaImage } from "@/components/sauna/SaunaImage";
 
 /** 최근 본 사우나 peek — 최근 id를 Supabase에서 직접 조회. 기록 없으면 섹션 숨김. */
 export function RecentPeek() {
@@ -36,8 +37,13 @@ export function RecentPeek() {
       href={saunaHref(recent)}
       className="mt-[4px] flex items-center gap-[12px] rounded-[18px] bg-card px-[14px] py-[12px] shadow-[0_2px_12px_rgba(0,0,0,0.05)]"
     >
-      <div className="flex h-[48px] w-[48px] flex-none items-center justify-center rounded-[12px] bg-[#EEF0F2]">
-        <Waves size={22} className="text-[#C3C7CD]" />
+      <div className="relative h-[48px] w-[48px] flex-none overflow-hidden rounded-[12px] bg-[#EEF0F2]">
+        <SaunaImage
+          src={recent.thumbnail_url}
+          alt={recent.name}
+          sizes="48px"
+          iconSize={18}
+        />
       </div>
       <div className="min-w-0 flex-1">
         <div className="text-[11px] font-semibold text-brand">최근 본 사우나</div>
