@@ -81,38 +81,56 @@ export function useRecords() {
     const supabase = createSupabaseBrowserClient();
     const trimmed = note.trim();
     if (!trimmed) {
+      const prev = records;
       records = records.filter((r) => r.saunaId !== saunaId);
       notify();
-      await supabase
+      const { error } = await supabase
         .from("sauna_memos")
         .delete()
         .eq("user_id", userId)
         .eq("sauna_id", saunaId);
+      if (error) {
+        // 실패 시 롤백.
+        records = prev;
+        notify();
+      }
       return;
     }
     const nowIso = new Date().toISOString();
     // 낙관적: 최신순 유지 위해 맨 앞으로.
+    const prev = records;
     records = [
       { saunaId, note: trimmed, updatedAt: nowIso },
       ...records.filter((r) => r.saunaId !== saunaId),
     ];
     notify();
-    await supabase.from("sauna_memos").upsert(
+    const { error } = await supabase.from("sauna_memos").upsert(
       { user_id: userId, sauna_id: saunaId, note: trimmed, updated_at: nowIso },
       { onConflict: "user_id,sauna_id" },
     );
+    if (error) {
+      // 실패 시 롤백.
+      records = prev;
+      notify();
+    }
   }, []);
 
   const removeRecord = useCallback(async (saunaId: string) => {
     if (!userId) return;
     const supabase = createSupabaseBrowserClient();
+    const prev = records;
     records = records.filter((r) => r.saunaId !== saunaId);
     notify();
-    await supabase
+    const { error } = await supabase
       .from("sauna_memos")
       .delete()
       .eq("user_id", userId)
       .eq("sauna_id", saunaId);
+    if (error) {
+      // 실패 시 롤백.
+      records = prev;
+      notify();
+    }
   }, []);
 
   return { records, userId, loading, setRecord, removeRecord };
