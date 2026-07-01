@@ -11,7 +11,10 @@ export function BlogReviews({ reviews }: { reviews: BlogReview[] }) {
 
   return (
     <section>
-      <h2 className="mb-[10px] text-[16px] font-bold text-ink">블로그 리뷰</h2>
+      <h2 className="mb-[12px] flex items-center gap-[8px] text-[16px] font-bold text-ink">
+        <span className="h-[15px] w-[3px] flex-none rounded-full bg-brand" />
+        블로그 리뷰
+      </h2>
       <ul className="flex flex-col">
         {reviews.map((r) => (
           <li key={r.id}>

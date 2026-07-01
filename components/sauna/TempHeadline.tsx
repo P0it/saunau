@@ -1,4 +1,4 @@
-import { Flame, Snowflake } from "lucide-react";
+import { SaunaRoomIcon, ColdBathIcon } from "./TempIcons";
 
 /** 초기 온도 데이터가 없을 때 사용하는 기본값. */
 const DEFAULT_SAUNA_TEMP = 90;
@@ -31,12 +31,12 @@ export function TempHeadline({
         className={`flex items-center gap-[6px] font-semibold tabular-nums ${text}`}
       >
         <span className="inline-flex items-center gap-[3px] text-hot">
-          <Flame size={icon} />
+          <SaunaRoomIcon size={icon} />
           {sauna}°
         </span>
         <span className="text-dot">·</span>
         <span className="inline-flex items-center gap-[3px] text-cold">
-          <Snowflake size={icon} />
+          <ColdBathIcon size={icon} />
           {cold}°
         </span>
       </div>
