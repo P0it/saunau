@@ -23,6 +23,7 @@ import { SaunaImage } from "@/components/sauna/SaunaImage";
 import { SaunaDetailBody } from "@/components/sauna/SaunaDetailBody";
 import { FavoriteScrubber } from "@/components/sauna/FavoriteScrubber";
 import { FlameRating } from "@/components/sauna/FlameRating";
+import { PanelRowSkeleton } from "@/components/ui/Skeleton";
 
 // 빠른 카테고리 칩(상단). 효소찜질방은 칩에선 "효소"로 축약.
 const CHIP_CATS: SaunaCategory[] = [
@@ -46,6 +47,7 @@ const CHIP_LABEL: Record<SaunaCategory, string> = {
  */
 export function MapSidePanel({
   saunas,
+  loading = false,
   selectedId,
   onSelect,
   onHover,
@@ -57,6 +59,7 @@ export function MapSidePanel({
   onQueryChange,
 }: {
   saunas: Sauna[];
+  loading?: boolean;
   selectedId: string | null;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
@@ -71,6 +74,7 @@ export function MapSidePanel({
     <div className="flex h-full w-full flex-col overflow-hidden bg-card">
       <ListView
         saunas={saunas}
+        loading={loading}
         selectedId={selectedId}
         onSelect={onSelect}
         onHover={onHover}
@@ -118,6 +122,7 @@ export function MapDetailPanel({
 /* ── 목록 ── */
 function ListView({
   saunas,
+  loading = false,
   selectedId,
   onSelect,
   onHover,
@@ -129,6 +134,7 @@ function ListView({
   onQueryChange,
 }: {
   saunas: Sauna[];
+  loading?: boolean;
   selectedId: string | null;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
@@ -201,13 +207,22 @@ function ListView({
           ) : (
             <>
               이 지역 사우나{" "}
-              <span className="tabular-nums text-brand">{saunas.length}</span>곳
+              <span className="tabular-nums text-brand">
+                {loading && saunas.length === 0 ? "…" : saunas.length}
+              </span>
+              곳
             </>
           )}
         </div>
       </header>
 
-      {saunas.length === 0 ? (
+      {loading && saunas.length === 0 ? (
+        <div className="flex flex-1 flex-col gap-[16px] overflow-hidden px-[16px] pt-[6px]">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <PanelRowSkeleton key={i} />
+          ))}
+        </div>
+      ) : saunas.length === 0 ? (
         <div className="flex flex-1 items-center justify-center px-[24px] text-center text-[13px] font-medium leading-[1.6] text-muted">
           {query.trim() ? (
             <>

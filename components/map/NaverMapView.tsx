@@ -236,6 +236,10 @@ export function NaverMapView({
   const [panelVisitorReviews, setPanelVisitorReviews] = useState<SaunaReview[]>([]);
   const [panelLoading, setPanelLoading] = useState(false);
   const [collapsed, setCollapsed] = useState(false); // 좌측 패널 접힘(지도 전체 보기)
+  // 좌표 진입 초기 목록 로딩 — 마운트 시 /api/nearby 가 채워질 때까지 패널에 스켈레톤 표시.
+  const [listLoading, setListLoading] = useState(
+    Boolean(initialCenter) && saunas.length === 0,
+  );
   const [isDesktop, setIsDesktop] = useState(false); // lg+ = 좌측 패널, 그 미만 = 바텀시트
   const meMarkerRef = useRef<any>(null); // 내 위치 파란 점
   // 현재 결과를 가져온 검색 중심(여기서 멀어지면 "이 지역 재검색"을 띄운다).
@@ -254,6 +258,34 @@ export function NaverMapView({
     update();
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
+  }, []);
+
+  // 좌표 진입("내 주변") — 서버 SSR 이 목록을 비워 보내므로(=대기 제거), 마운트 즉시
+  // /api/nearby 로 주변을 병렬 로드한다. 지도 SDK 다운로드와 동시에 진행돼 진입이 빨라진다.
+  useEffect(() => {
+    if (!initialCenter || saunaList.length > 0) return;
+    let cancelled = false;
+    fetch(
+      `/api/nearby?lat=${initialCenter.lat.toFixed(6)}&lng=${initialCenter.lng.toFixed(6)}`,
+    )
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled || !Array.isArray(j.saunas)) return;
+        setSaunaList(j.saunas as Sauna[]);
+        const first = (j.saunas as Sauna[]).find((s) => s.location);
+        suppressPanRef.current = true; // 첫 선택이 지도를 끌고가지 않게
+        setSelected(first?.id ?? null);
+      })
+      .catch(() => {
+        /* 실패 시 빈 목록 유지 — 지도는 내 위치 중심으로 열림 */
+      })
+      .finally(() => {
+        if (!cancelled) setListLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 내 주변 보기 — 버튼 클릭 시 브라우저 위치 동의를 띄우고, 허용되면 내 위치로 이동.
@@ -833,6 +865,7 @@ export function NaverMapView({
             <div className="h-full w-full overflow-hidden">
               <MapSidePanel
                 saunas={withLoc}
+                loading={listLoading}
                 selectedId={selected}
                 onSelect={openPanel}
                 onHover={setHovered}
@@ -912,6 +945,7 @@ export function NaverMapView({
           <BottomSheet zClassName="z-[8]" peekPx={170}>
             <MapSidePanel
               saunas={withLoc}
+              loading={listLoading}
               selectedId={selected}
               onSelect={openPanel}
               onHover={setHovered}

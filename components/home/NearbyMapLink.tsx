@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MapPin, Loader2 } from "lucide-react";
 import { FeaturedMapScene } from "@/components/illustrations";
-import { saveCoords } from "@/lib/geo";
+import { saveCoords, getCachedCoords, requestLocation } from "@/lib/geo";
 
 /**
  * 홈 "내 주변 사우나" 진입 카드.
@@ -21,6 +21,15 @@ export function NearbyMapLink() {
   function handleClick() {
     if (loading) return;
     const go = (qs = "") => router.push(`/map${qs}`);
+
+    // 앱 로드 때 requestLocationOnce() 로 좌표가 캐시돼 있으면 즉시 이동 — GPS 대기 없음.
+    // (기존엔 매번 새로 getCurrentPosition 을 기다려 "위치 확인 중"이 최대 8초까지 돌았음.)
+    const cached = getCachedCoords();
+    if (cached) {
+      void requestLocation(); // 다음 진입을 위해 백그라운드로 신선화(내비는 막지 않음)
+      return go(`?lat=${cached.lat.toFixed(6)}&lng=${cached.lng.toFixed(6)}`);
+    }
+
     if (typeof navigator === "undefined" || !navigator.geolocation) return go();
     setLoading(true);
     navigator.geolocation.getCurrentPosition(

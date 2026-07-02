@@ -1,4 +1,4 @@
-import { getNearbySaunas, getSaunasNearby } from "@/lib/data/queries";
+import { getNearbySaunas } from "@/lib/data/queries";
 import type { Sauna } from "@/lib/data/types";
 import { NaverMapView } from "@/components/map/NaverMapView";
 
@@ -20,17 +20,10 @@ export default async function MapPage({
       ? { lat: latN, lng: lngN }
       : undefined;
 
-  // 내 위치를 받았으면 거리순 주변을, 아니면 전국 최신 목록을. (0007 미적용 시 폴백)
-  let saunas: Sauna[];
-  if (initialCenter) {
-    try {
-      saunas = await getSaunasNearby(initialCenter.lat, initialCenter.lng);
-    } catch {
-      saunas = await getNearbySaunas();
-    }
-  } else {
-    saunas = await getNearbySaunas();
-  }
+  // 좌표로 진입("내 주변")했으면 서버 RPC를 기다리지 않고 셸을 즉시 렌더한다 —
+  // NaverMapView 가 마운트 즉시 /api/nearby 로 주변을 가져오므로, 지도 SDK 로드와 병렬로
+  // 진행돼 진입 체감이 크게 짧아진다. 좌표가 없을 때만 전국 핀을 SSR 로 미리 채운다.
+  const saunas: Sauna[] = initialCenter ? [] : await getNearbySaunas();
 
   return <NaverMapView saunas={saunas} initialCenter={initialCenter} />;
 }
