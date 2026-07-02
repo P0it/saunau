@@ -662,8 +662,23 @@ export function NaverMapView({
     if (prev && prev !== selected) styleMarker(prev); // 이전 선택 핀 원복(호버 중이면 호버 유지)
     styleMarker(selected);
     const sel = selected && withLoc.find((s) => s.id === selected);
-    if (sel && !suppressPanRef.current)
-      mapRef.current.panTo(new naver.maps.LatLng(sel.location.lat, sel.location.lng));
+    if (sel && !suppressPanRef.current) {
+      const target = new naver.maps.LatLng(sel.location.lat, sel.location.lng);
+      // 데스크톱 좌측 오버레이(목록 400 + 상세 400, 접힘·열림 상태별)를 제외한
+      // '보이는 지도 영역'의 중앙에 핀이 오도록 패널 폭의 절반만큼 서쪽으로 옮겨 panTo.
+      const occupied = isDesktop
+        ? (collapsed ? 0 : 400) + (panelId ? 400 : 0)
+        : 0;
+      if (occupied > 0) {
+        const proj = mapRef.current.getProjection();
+        const pt = proj.fromCoordToOffset(target);
+        mapRef.current.panTo(
+          proj.fromOffsetToCoord(new naver.maps.Point(pt.x - occupied / 2, pt.y)),
+        );
+      } else {
+        mapRef.current.panTo(target);
+      }
+    }
     suppressPanRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
@@ -758,7 +773,9 @@ export function NaverMapView({
         <div
           className={`absolute bottom-[238px] right-0 z-[6] flex justify-center transition-[left] duration-300 lg:bottom-[78px] ${
             collapsed
-              ? "left-0"
+              ? panelSauna
+                ? "left-0 lg:left-[400px]"
+                : "left-0"
               : panelSauna
                 ? "left-0 sm:left-[400px] lg:left-[800px]"
                 : "left-0 sm:left-[400px]"
@@ -787,7 +804,9 @@ export function NaverMapView({
         <div
           className={`pointer-events-none absolute bottom-[186px] right-0 z-[6] flex justify-center transition-[left] duration-300 lg:bottom-[24px] ${
             collapsed
-              ? "left-0"
+              ? panelSauna
+                ? "left-0 lg:left-[400px]"
+                : "left-0"
               : panelSauna
                 ? "left-0 sm:left-[400px] lg:left-[800px]"
                 : "left-0 sm:left-[400px]"
