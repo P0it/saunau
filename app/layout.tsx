@@ -1,7 +1,15 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { pretendard } from "./fonts";
 import { AppFrame } from "@/components/layout/AppFrame";
+
+// maximumScale 1 — 입력창(16px 미만 폰트) 포커스 시 iOS 사파리가 페이지를 강제 확대해
+// 폭이 틀어지고 가로 스크롤이 생기는 것을 방지. iOS는 사용자 핀치줌을 여전히 허용한다.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
 
 export const metadata: Metadata = {
   title: {

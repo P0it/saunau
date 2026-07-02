@@ -126,11 +126,12 @@ export function LoginSheet({
               </p>
               <div className="mt-[14px] flex items-center gap-[10px] rounded-[12px] border border-line bg-white px-[14px] py-[12px]">
                 <Mail size={18} className="text-muted" />
+                {/* autoFocus 금지 — 모바일에서 시트가 뜨자마자 키보드(+툴바)가 올라와
+                    뷰포트가 밀리며 레이아웃이 깨진다. 주 동선도 구글 버튼이라 자동 포커스 불필요. */}
                 <input
                   type="email"
                   inputMode="email"
                   autoComplete="email"
-                  autoFocus
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={(e) => {
