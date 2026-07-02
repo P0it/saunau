@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { pretendard } from "./fonts";
 import { AppFrame } from "@/components/layout/AppFrame";
 
 export const metadata: Metadata = {
@@ -18,14 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
-      <head>
-        {/* 디자인과 동일하게 Pretendard CDN(추후 next/font로 최적화) */}
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"
-        />
-      </head>
+    <html lang="ko" className={pretendard.variable}>
       <body>
         <AppFrame>{children}</AppFrame>
       </body>

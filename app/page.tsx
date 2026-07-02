@@ -20,7 +20,7 @@ import {
   SandBathScene,
 } from "@/components/illustrations";
 
-export const dynamic = "force-dynamic"; // 동기화된 DB를 항상 최신으로
+export const revalidate = 60; // ISR: 60초마다 백그라운드 갱신(방문자는 캐시된 즉시 응답)
 
 export default async function HomePage() {
   const [newOpenings, articles] = await Promise.all([

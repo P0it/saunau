@@ -3,7 +3,7 @@ import { getArticles } from "@/lib/data/queries";
 import { ArticleCard } from "@/components/magazine/ArticleCard";
 import { FeaturedArticleCard } from "@/components/magazine/FeaturedArticleCard";
 
-export const dynamic = "force-dynamic"; // 동기화된 DB를 항상 최신으로
+export const revalidate = 60; // ISR: 60초마다 백그라운드 갱신(방문자는 캐시된 즉시 응답)
 
 export const metadata: Metadata = {
   title: "읽을거리",

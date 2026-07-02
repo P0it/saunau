@@ -20,7 +20,7 @@ type Params = { sido: string; slug: string };
 
 // 5천여 건을 빌드 타임에 전부 프리렌더하지 않고 요청 시 SSR(크롤 가능).
 // generateStaticParams 를 두지 않으면 순수 동적 라우트(ƒ)로 동작.
-export const dynamic = "force-dynamic";
+export const revalidate = 60; // ISR: 60초마다 백그라운드 갱신(방문자는 캐시된 즉시 응답)
 
 export async function generateMetadata({
   params,

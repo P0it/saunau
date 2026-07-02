@@ -7,7 +7,7 @@ import { ArticleThumb } from "@/components/magazine/ArticleThumb";
 
 type Params = { slug: string };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60; // ISR: 60초마다 백그라운드 갱신(방문자는 캐시된 즉시 응답)
 
 export async function generateMetadata({
   params,

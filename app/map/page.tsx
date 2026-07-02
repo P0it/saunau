@@ -3,7 +3,7 @@ import type { Sauna } from "@/lib/data/types";
 import { NaverMapView } from "@/components/map/NaverMapView";
 
 export const metadata = { title: "지도" };
-export const dynamic = "force-dynamic"; // 동기화된 DB를 항상 최신으로
+export const revalidate = 60; // ISR: 60초마다 백그라운드 갱신(?lat=&lng= 진입은 동적 렌더)
 
 /** 지도뷰 — 네이버 지도 SDK. 핀(분류 아이콘+상호) + 하단 시트.
  * 홈 "내 주변"에서 위치 동의 후 넘어오면 ?lat=&lng= 로 내 위치를 받아 그 자리에서 연다. */

@@ -25,7 +25,8 @@
   --radius-tile: 18px;
   --radius-frame: 30px;
 
-  --font-sans: Pretendard, system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-pretendard), Pretendard, system-ui, -apple-system,
+    sans-serif;
 }
 
 html {

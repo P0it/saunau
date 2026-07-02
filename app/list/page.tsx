@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, Suspense } from "react";
+import { useEffect, useMemo, useRef, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -152,6 +152,27 @@ function ListInner() {
     return rows;
   }, [all, type, sort, attrs, sheet, query]);
 
+  // 렌더 windowing — 수백 개 카드(각 Image)를 한 번에 그리면 전환이 버벅인다.
+  // 처음 PAGE 개만 그리고, 하단 센티넬이 보이면 이어서 채운다(무한 스크롤).
+  const PAGE = 20;
+  const [visible, setVisible] = useState(PAGE);
+  // 필터·정렬·검색으로 목록이 바뀌면 처음부터 다시.
+  useEffect(() => setVisible(PAGE), [list]);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting)
+          setVisible((v) => Math.min(v + PAGE, list.length));
+      },
+      { rootMargin: "400px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [list.length]);
+
   // 헤더 문맥: 테마(타입/세신)로 들어오면 그 이름, 기본 진입은 근접성 의미의 "내 주변".
   const heading =
     type !== "all"
@@ -278,7 +299,14 @@ function ListInner() {
               : "조건에 맞는 사우나가 없어요"}
           </div>
         ) : (
-          list.map((s) => <SaunaCard key={s.id} sauna={s} />)
+          <>
+            {list.slice(0, visible).map((s) => (
+              <SaunaCard key={s.id} sauna={s} />
+            ))}
+            {visible < list.length && (
+              <div ref={sentinelRef} className="h-[1px]" aria-hidden />
+            )}
+          </>
         )}
       </div>
 

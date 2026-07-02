@@ -14,6 +14,13 @@ export async function middleware(request: NextRequest) {
   // env 누락 시 인증 없이 통과(앱의 익명 동작은 계속 유지).
   if (!url || !anon) return response;
 
+  // 익명 둘러보기(대부분의 트래픽)엔 세션 쿠키가 없다 → getUser() 인증서버 왕복을 건너뛴다.
+  // 매 네비게이션마다 붙던 네트워크 지연 제거. 세션 쿠키가 있을 때만 갱신 수행.
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith("sb-") && c.name.includes("auth-token"));
+  if (!hasAuthCookie) return response;
+
   const supabase = createServerClient(url, anon, {
     cookies: {
       getAll() {
