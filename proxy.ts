@@ -1,12 +1,12 @@
 /**
- * 세션 갱신 미들웨어 — 매 요청마다 Supabase 세션 토큰을 갱신해 로그인을 유지.
- * 라우트 보호는 하지 않는다(둘러보기·검색·지도·상세·마이페이지 모두 익명 접근 허용).
+ * 세션 갱신 프록시(구 middleware, Next 16 proxy 컨벤션) — 요청마다 Supabase 세션 토큰을
+ * 갱신해 로그인을 유지. 라우트 보호는 하지 않는다(둘러보기·검색·지도·상세·마이 모두 익명 허용).
  * @supabase/ssr 표준 패턴: 요청/응답 쿠키를 동기화하고 getUser()로 토큰을 리프레시.
  */
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
