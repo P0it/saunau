@@ -20,3 +20,40 @@ export function SkeletonHeader() {
     </div>
   );
 }
+
+/** SaunaCard 형태(이미지 상단 + 제목/부제) 스켈레톤 — 목록·홈 폴백 공용. */
+export function SaunaCardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-[20px] bg-card shadow-[0_2px_12px_rgba(0,0,0,0.05)]">
+      <Skeleton className="h-[150px] w-full rounded-none" />
+      <div className="flex flex-col gap-[10px] p-[16px]">
+        <Skeleton className="h-[16px] w-[60%] rounded-[6px]" />
+        <Skeleton className="h-[12px] w-[35%] rounded-[6px]" />
+      </div>
+    </div>
+  );
+}
+
+/** 카드 스켈레톤 n개 목록. */
+export function SaunaListSkeleton({ count = 5 }: { count?: number }) {
+  return (
+    <div className="flex flex-col gap-[14px]">
+      {Array.from({ length: count }).map((_, i) => (
+        <SaunaCardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
+/** 지도 패널/시트용 가로형(썸네일+2줄) 카드 스켈레톤. */
+export function PanelRowSkeleton() {
+  return (
+    <div className="flex gap-[12px]">
+      <Skeleton className="h-[64px] w-[64px] flex-none rounded-[14px]" />
+      <div className="flex flex-1 flex-col justify-center gap-[8px]">
+        <Skeleton className="h-[15px] w-[55%] rounded-[6px]" />
+        <Skeleton className="h-[12px] w-[35%] rounded-[6px]" />
+      </div>
+    </div>
+  );
+}

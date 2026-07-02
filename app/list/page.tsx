@@ -15,6 +15,7 @@ import { getDiscoverSaunas, getSaunasByCategory, getSaunasNearby } from "@/lib/d
 import { inCategory, type Sauna, type VenueType } from "@/lib/data/types";
 import { useCoords, requestLocation } from "@/lib/geo";
 import { SaunaCard } from "@/components/sauna/SaunaCard";
+import { SaunaListSkeleton } from "@/components/ui/Skeleton";
 import { Segment } from "@/components/ui/Segment";
 import {
   FilterSheet,
@@ -289,9 +290,7 @@ function ListInner() {
       {/* list */}
       <div className="flex flex-col gap-[14px] px-[16px] pb-[20px]">
         {loading ? (
-          <div className="py-[60px] text-center text-[14px] text-muted">
-            불러오는 중…
-          </div>
+          <SaunaListSkeleton count={6} />
         ) : list.length === 0 ? (
           <div className="py-[60px] text-center text-[14px] text-muted">
             {query.trim()

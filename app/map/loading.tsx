@@ -1,31 +1,49 @@
-import { Skeleton } from "@/components/ui/Skeleton";
+import { Skeleton, PanelRowSkeleton } from "@/components/ui/Skeleton";
 
 /**
- * 지도 전환 스켈레톤 — 풀블리드. 지도 캔버스 자리(연회색) + 상단 필터 칩 + 하단 시트 뼈대.
- * 네이버 지도 SDK 로드 전에 즉시 표시돼 흰 화면 대기를 없앤다.
+ * 지도 전환 스켈레톤 — 실제 레이아웃과 동형(반응형).
+ *  · 데스크톱(lg+): 왼쪽 사이드패널(검색+칩+목록) + 나머지 지도 영역.
+ *  · 모바일(<lg): 하단 바텀시트(peek).
+ * 지도 캔버스는 연회색(#ECEAE5, NaverMapView 루트와 동일)으로 채워 흰 화면 대기를 없앤다.
  */
 export default function MapLoading() {
   return (
-    <div className="relative flex h-full w-full flex-col overflow-hidden bg-[#EAECEF]">
-      {/* 상단 빠른필터 칩 자리 */}
-      <div className="flex flex-none gap-[8px] px-[14px] pb-[10px] pt-[14px]">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-[34px] w-[68px] rounded-full" />
-        ))}
-      </div>
-      <div className="flex-1" />
-      {/* 하단 시트 자리 */}
-      <div className="flex-none rounded-t-[20px] bg-card px-[16px] pb-[20px] pt-[14px] shadow-[0_-2px_16px_rgba(0,0,0,0.06)]">
-        <Skeleton className="mx-auto mb-[14px] h-[4px] w-[40px] rounded-full" />
-        {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="mb-[14px] flex gap-[12px]">
-            <Skeleton className="h-[64px] w-[64px] rounded-[14px]" />
-            <div className="flex flex-1 flex-col justify-center gap-[8px]">
-              <Skeleton className="h-[15px] w-[55%] rounded-[6px]" />
-              <Skeleton className="h-[12px] w-[35%] rounded-[6px]" />
-            </div>
+    <div className="relative h-full w-full overflow-hidden bg-[#ECEAE5]">
+      {/* ── 데스크톱(lg+): 왼쪽 사이드패널 ── */}
+      <div className="absolute inset-y-0 left-0 z-10 hidden w-full max-w-[400px] flex-col bg-card shadow-[6px_0_24px_rgba(0,0,0,0.12)] lg:flex">
+        <div className="flex flex-col gap-[14px] px-[18px] pb-[10px] pt-[16px]">
+          <Skeleton className="h-[22px] w-[96px] rounded-[6px]" />
+          {/* 검색 바 */}
+          <Skeleton className="h-[42px] w-full rounded-full" />
+          {/* 카테고리 칩 */}
+          <div className="flex gap-[8px]">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-[32px] w-[64px] rounded-full" />
+            ))}
           </div>
-        ))}
+        </div>
+        {/* 목록 */}
+        <div className="flex flex-1 flex-col gap-[16px] px-[18px] pb-[20px] pt-[6px]">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <PanelRowSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+
+      {/* 우측 기능 레일(줌/현재위치) 자리 — 데스크톱 */}
+      <div className="absolute bottom-[24px] right-[16px] z-10 hidden flex-col gap-[18px] lg:flex">
+        <Skeleton className="h-[90px] w-[44px] rounded-[12px]" />
+        <Skeleton className="h-[44px] w-[44px] rounded-[12px]" />
+      </div>
+
+      {/* ── 모바일(<lg): 하단 바텀시트(peek) ── */}
+      <div className="absolute inset-x-0 bottom-0 z-10 rounded-t-[20px] bg-card px-[16px] pb-[20px] pt-[14px] shadow-[0_-2px_16px_rgba(0,0,0,0.06)] lg:hidden">
+        <Skeleton className="mx-auto mb-[14px] h-[4px] w-[40px] rounded-full" />
+        <div className="flex flex-col gap-[16px]">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <PanelRowSkeleton key={i} />
+          ))}
+        </div>
       </div>
     </div>
   );
