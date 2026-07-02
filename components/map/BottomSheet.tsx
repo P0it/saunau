@@ -86,14 +86,18 @@ export function BottomSheet({
       }`}
       style={{ transform: y === null ? "translateY(100%)" : `translateY(${y}px)` }}
     >
+      {/* 그랩 핸들 — 바(5px)는 그대로 두고 터치 타깃만 ≈44px 로 확장.
+          레이아웃 패딩(12+5+8=25px) + 투명 오버레이(위 8px·아래 12px)로 히트 영역을 넓힌다.
+          아래 12px 는 콘텐츠 상단 패딩 위라 버튼·입력과 겹치지 않는다. */}
       <div
-        className="flex-none cursor-grab touch-none pb-[6px] pt-[9px] active:cursor-grabbing"
+        className="relative flex-none cursor-grab touch-none pb-[8px] pt-[12px] active:cursor-grabbing"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
         <div className="mx-auto h-[5px] w-[40px] rounded-full bg-[#D8D5D1]" />
+        <div className="absolute inset-x-0 -bottom-[12px] -top-[8px]" />
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
     </div>

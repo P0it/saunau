@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { BottomTabBar } from "./BottomTabBar";
-import { SplashScreen } from "./SplashScreen";
+import { SplashScreen, SPLASH_TOTAL_MS } from "./SplashScreen";
 import { requestLocationOnce } from "@/lib/geo";
 
 /**
@@ -16,8 +16,10 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
   const fullBleed = pathname.startsWith("/map");
 
   // 앱 로드 시 1회 위치 동의 — "내 주변"이 내 위치 기준으로 열리도록 좌표를 캐시.
+  // 스플래시가 완전히 사라진 뒤 요청해야 권한 프롬프트가 로딩 화면을 가리지 않는다.
   useEffect(() => {
-    requestLocationOnce();
+    const timer = setTimeout(requestLocationOnce, SPLASH_TOTAL_MS);
+    return () => clearTimeout(timer);
   }, []);
 
   return (

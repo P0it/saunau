@@ -11,7 +11,9 @@ export function Segment<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex gap-[6px]">
+    // w-max: 좁은 화면에서 부모(overflow-x-auto) 폭에 눌려 라벨이 줄바꿈되지 않도록
+    // 항상 내용 폭을 유지 — 넘치면 가로 스크롤로 밀린다.
+    <div className="flex w-max gap-[6px]">
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -19,7 +21,7 @@ export function Segment<T extends string>({
             key={o.value}
             type="button"
             onClick={() => onChange(o.value)}
-            className="rounded-full px-[14px] py-[7px] text-[14px] font-semibold transition-colors"
+            className="flex-none whitespace-nowrap rounded-full px-[14px] py-[7px] text-[14px] font-semibold transition-colors"
             style={
               active
                 ? { background: "#FDECE9", color: "var(--color-brand)" }

@@ -11,6 +11,9 @@ import { Wordmark } from "./Wordmark";
 const HOLD_MS = 1100; // 애니메이션을 보여주는 시간
 const FADE_MS = 450; // 페이드아웃 시간
 
+/** 스플래시가 완전히 사라지기까지의 총 시간 — 이후에 떠야 하는 프롬프트류의 지연 기준. */
+export const SPLASH_TOTAL_MS = HOLD_MS + FADE_MS;
+
 export function SplashScreen({ fullBleed = false }: { fullBleed?: boolean }) {
   const [phase, setPhase] = useState<"show" | "fade" | "done">("show");
 
