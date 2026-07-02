@@ -13,12 +13,21 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "사우나우 — 내 주변 사우나 디스커버리",
+    default: "사우나우 - 전국 사우나 지도",
     template: "%s · 사우나우",
   },
-  description:
-    "전국의 사우나·대중탕·온천·찜질방을 사우나실/냉탕 온도까지 한눈에. 내 주변 갈 만한 쾌적한 사우나를 빠르게 찾으세요.",
-  metadataBase: new URL("https://saunau.app"),
+  description: "내 주변 목욕탕·찜질방·온천 찾기",
+  metadataBase: new URL("https://saunau.vercel.app"),
+  // 카톡·페북 등 공유 카드. og:image 는 app/opengraph-image.tsx (파일 컨벤션)가 붙인다.
+  openGraph: {
+    type: "website",
+    siteName: "사우나우",
+    locale: "ko_KR",
+    url: "/",
+    title: "사우나우 - 전국 사우나 지도",
+    description: "내 주변 목욕탕·찜질방·온천 찾기",
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({

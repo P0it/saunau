@@ -31,12 +31,23 @@ export async function generateMetadata({
   const s = await getSaunaBySlug(sido, slug);
   if (!s) return { title: "사우나를 찾을 수 없어요" };
   const cat = CATEGORY_LABEL[primaryCategory(s)];
+  const canonical = `/sauna/${encodeURIComponent(s.sido)}/${s.slug}`;
+  const description =
+    s.editor_note ??
+    `${s.address}. 사우나실 ${s.sauna_room_temp ?? "-"}° · 냉탕 ${s.cold_bath_temp ?? "-"}°`;
   return {
     title: `${s.name} — ${s.sigungu} ${cat}`,
-    description:
-      s.editor_note ??
-      `${s.address}. 사우나실 ${s.sauna_room_temp ?? "-"}° · 냉탕 ${s.cold_bath_temp ?? "-"}°`,
-    alternates: { canonical: `/sauna/${encodeURIComponent(s.sido)}/${s.slug}` },
+    description,
+    alternates: { canonical },
+    // 공유 카드 이미지는 같은 폴더의 opengraph-image.tsx 가 붙인다.
+    openGraph: {
+      type: "website",
+      siteName: "사우나우",
+      locale: "ko_KR",
+      url: canonical,
+      title: `${s.name} — ${s.sigungu} ${cat}`,
+      description,
+    },
   };
 }
 
