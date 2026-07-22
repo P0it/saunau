@@ -20,7 +20,9 @@
     "crawl:website": "tsx scripts/crawl-website.ts",
     "describe": "tsx scripts/describe.ts",
     "import:articles": "tsx scripts/import-articles.ts",
-    "flag": "tsx scripts/flag.ts"
+    "flag": "tsx scripts/flag.ts",
+    "audit:storage": "tsx scripts/audit-storage.ts",
+    "cleanup:storage": "tsx scripts/cleanup-storage.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

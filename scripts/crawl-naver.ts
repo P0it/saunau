@@ -34,6 +34,7 @@ import {
   saveCrawledPhotos,
   saveBlogReviews,
   setRepresentativeThumb,
+  blogThumbKey,
 } from "../lib/ingest/naver/store";
 
 config({ path: ".env.local" });
@@ -229,9 +230,13 @@ async function main() {
         for (let i = 0; i < posts.length; i++) {
           const og = await fetchOgImage(posts[i].blogUrl);
           if (!og) continue;
-          const sp = await downloadToStorage(supabase, s.id, `blog-${i}`, {
-            sourceUrl: og,
-          });
+          const sp = await downloadToStorage(
+            supabase,
+            s.id,
+            blogThumbKey(posts[i].blogUrl), // 글 URL 해시 — 배열 인덱스 금지(재크롤 시 뒤바뀜)
+            { sourceUrl: og },
+            "thumb", // 64px 로만 렌더된다 — 갤러리 규격으로 저장하지 말 것
+          );
           if (sp) {
             posts[i].thumbUrl = sp.url;
             summary.reviewThumbs++;

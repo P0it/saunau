@@ -7,11 +7,25 @@
  *  - source_url(원본)은 DB(서버 전용)에만. 앱 쿼리는 이 컬럼을 select 하지 않는다.
  *  - 대표 썸네일은 우리 자산(owner/editor/licensed/google)을 크롤이 덮어쓰지 않는다.
  */
+import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import type { NaverBlogPost } from "./types";
 
 const BUCKET = "sauna-photos";
+
+/**
+ * 블로그 썸네일의 Storage 키 — **글 URL 로부터 결정**된다.
+ *
+ * 예전엔 `blog-${크롤 시점 배열 인덱스}` 를 썼는데, 재크롤에서 글 순서가 바뀌면
+ * 같은 경로에 다른 글의 이미지가 덮여 예전 행이 엉뚱한 썸네일을 가리키게 된다.
+ * URL 해시로 키를 잡으면 글↔객체가 1:1 로 고정돼 그 사고가 원천 차단되고,
+ * 재크롤이 같은 글을 다시 만나도 같은 경로를 덮어쓰므로 잔재도 안 쌓인다.
+ */
+export function blogThumbKey(blogUrl: string): string {
+  const h = createHash("sha1").update(blogUrl).digest("hex").slice(0, 12);
+  return `blog-${h}`;
+}
 
 /** 사진 출처 우선순위(높을수록 보존). 대표 썸네일 교체 판단에 쓴다. */
 export type PhotoSourceKind =
@@ -40,10 +54,20 @@ export interface PhotoRef {
   fetchUrl?: string;
 }
 
-// 저장 용량 최적화: 갤러리 표시 최대폭 ~430px, 블로그 썸네일 64px 라
-// 720px(레티나 충분) 상한 + WebP 로 재인코딩한다. 원본(수 MB)을 그대로 두지 않는다.
-const MAX_WIDTH = 720;
-const WEBP_QUALITY = 72;
+/**
+ * 저장 프로필 — **표시 크기에 맞춰** 재인코딩한다. 하나로 뭉뚱그리면 안 된다.
+ *
+ *  gallery: 상세 갤러리 표시 최대폭 ~430px → 720px(레티나 충분).
+ *  thumb  : 블로그 후기 썸네일은 64×64 로만 렌더된다(components/sauna/BlogReviews.tsx).
+ *           과거 이걸 gallery 와 같은 720px 로 저장해 버킷의 93%(1.1GB)를 잡아먹었다.
+ *           160px = 64px 의 2.5배로 레티나에 충분하고 장당 ~4KB 에 든다.
+ */
+export type SizeProfile = "gallery" | "thumb";
+
+const PROFILES: Record<SizeProfile, { width: number; quality: number }> = {
+  gallery: { width: 720, quality: 72 },
+  thumb: { width: 160, quality: 70 },
+};
 
 interface Optimized {
   buf: Uint8Array;
@@ -52,15 +76,19 @@ interface Optimized {
 }
 
 /**
- * 원본 바이트 → WebP 재인코딩(+ 720px 상한, EXIF 회전 보정).
+ * 원본 바이트 → WebP 재인코딩(+ 프로필별 폭 상한, EXIF 회전 보정).
  * 읽기 불가/손상 이미지는 null → 그 사진은 버린다(행 생성 안 함).
  */
-async function optimizeImage(input: Uint8Array): Promise<Optimized | null> {
+export async function optimizeImage(
+  input: Uint8Array,
+  profile: SizeProfile = "gallery",
+): Promise<Optimized | null> {
+  const { width, quality } = PROFILES[profile];
   try {
     const out = await sharp(input, { failOn: "none" })
       .rotate() // EXIF orientation 반영 후 메타 제거
-      .resize({ width: MAX_WIDTH, withoutEnlargement: true })
-      .webp({ quality: WEBP_QUALITY })
+      .resize({ width, withoutEnlargement: true })
+      .webp({ quality })
       .toBuffer({ resolveWithObject: true });
     if (out.data.byteLength === 0) return null;
     return {
@@ -84,12 +112,14 @@ export interface StoredPhoto {
 /**
  * 원본 사진 1장을 다운로드 → WebP 최적화 → 우리 Storage 에 업로드.
  * 다운로드·디코드·업로드 중 하나라도 실패하면 null(행 생성 안 함).
+ * profile 로 표시 크기에 맞는 저장 규격을 고른다(블로그 썸네일은 반드시 "thumb").
  */
 export async function downloadToStorage(
   supabase: SupabaseClient,
   saunaId: string,
   key: string | number,
   photo: PhotoRef,
+  profile: SizeProfile = "gallery",
 ): Promise<StoredPhoto | null> {
   try {
     const res = await fetch(photo.fetchUrl ?? photo.sourceUrl, {
@@ -99,7 +129,7 @@ export async function downloadToStorage(
     const raw = new Uint8Array(await res.arrayBuffer());
     if (raw.byteLength === 0) return null;
 
-    const opt = await optimizeImage(raw);
+    const opt = await optimizeImage(raw, profile);
     if (!opt) return null;
 
     const storagePath = `${saunaId}/${key}.webp`;
@@ -179,29 +209,49 @@ export async function setRepresentativeThumb(
   if (upErr) throw new Error(`대표 썸네일 세팅 실패(${saunaId}): ${upErr.message}`);
 }
 
-/** 블로그 후기 upsert(sauna_id, blog_url 유니크). */
+/**
+ * 블로그 후기 upsert(sauna_id, blog_url 유니크).
+ *
+ * 썸네일 없는 글은 **thumb_url 을 payload 에서 아예 뺀다.** 한 배열에 섞어 upsert 하면
+ * PostgREST 가 키를 합집합으로 맞추면서 null 이 들어가, 재크롤에서 og:image 수집이
+ * 한 번 실패했을 뿐인데 **멀쩡하던 썸네일이 지워진다**(실제로 218행이 이렇게 비었다).
+ * 컬럼을 빼면 ON CONFLICT DO UPDATE 대상에서 제외돼 기존 값이 보존된다.
+ */
 export async function saveBlogReviews(
   supabase: SupabaseClient,
   saunaId: string,
   posts: NaverBlogPost[],
 ): Promise<number> {
   if (!posts.length) return 0;
-  const rows = posts.map((p) => ({
+  const base = (p: NaverBlogPost) => ({
     sauna_id: saunaId,
     title: p.title,
     snippet: p.snippet,
     blog_url: p.blogUrl,
     blogger_name: p.bloggerName,
-    // og:image 를 우리 Storage 로 재호스팅한 URL(실패 시 null). 외부 핫링크 금지.
-    thumb_url: p.thumbUrl ?? null,
     posted_at: p.postedAt,
     source: "naver_blog",
     is_active: true,
-  }));
-  const { error } = await supabase
-    .from("sauna_blog_reviews")
-    .upsert(rows, { onConflict: "sauna_id,blog_url", ignoreDuplicates: false });
-  if (error)
-    throw new Error(`sauna_blog_reviews upsert 실패(${saunaId}): ${error.message}`);
-  return rows.length;
+  });
+
+  // og:image 를 우리 Storage 로 재호스팅한 URL 이 있는 것만 thumb_url 을 싣는다(외부 핫링크 금지).
+  const withThumb = posts
+    .filter((p) => p.thumbUrl)
+    .map((p) => ({ ...base(p), thumb_url: p.thumbUrl }));
+  const withoutThumb = posts.filter((p) => !p.thumbUrl).map(base);
+
+  for (const rows of [withThumb, withoutThumb]) {
+    if (!rows.length) continue;
+    const { error } = await supabase
+      .from("sauna_blog_reviews")
+      .upsert(rows, {
+        onConflict: "sauna_id,blog_url",
+        ignoreDuplicates: false,
+      });
+    if (error)
+      throw new Error(
+        `sauna_blog_reviews upsert 실패(${saunaId}): ${error.message}`,
+      );
+  }
+  return posts.length;
 }
