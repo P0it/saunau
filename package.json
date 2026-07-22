@@ -22,7 +22,9 @@
     "import:articles": "tsx scripts/import-articles.ts",
     "flag": "tsx scripts/flag.ts",
     "audit:storage": "tsx scripts/audit-storage.ts",
-    "cleanup:storage": "tsx scripts/cleanup-storage.ts"
+    "cleanup:storage": "tsx scripts/cleanup-storage.ts",
+    "backfill:thumbs": "tsx scripts/backfill-blog-thumbs.ts",
+    "prune:reviews": "tsx scripts/prune-blog-reviews.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

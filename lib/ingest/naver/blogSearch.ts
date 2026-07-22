@@ -118,9 +118,32 @@ const DOMAIN_TERMS = [
 ];
 
 /**
+ * 후기가 아니라 **업소 정보를 나열하는 디렉터리 사이트**. 상호·지역이 정확히 일치해
+ * 관련성 필터를 통과하지만, 방문기가 아니라 등록 정보라 후기로 노출하면 안 된다.
+ *
+ * 판별 근거(수집분 7,164건 실측): 정상 블로그는 og:image 보유율 92~100% 인데
+ * 이 도메인들은 **0%** 였고, 제목이 "{상호} - {지역} {업태} | {사이트명}" 꼴로 획일적이다.
+ */
+const BLOCKED_HOSTS = new Set([
+  "bloomjda.net", // 꽃피다 — 업체 디렉터리
+  "dumbndumber.co.kr", // 업소 나열
+  "march14th.net", // 업소 나열
+]);
+
+/** 디렉터리 사이트 글인가. 파싱 불가 URL 은 막지 않는다(보수적). */
+export function isBlockedBlogHost(url: string): boolean {
+  try {
+    return BLOCKED_HOSTS.has(new URL(url).hostname.replace(/^www\./, ""));
+  } catch {
+    return false;
+  }
+}
+
+/**
  * 검색 결과 중 "이 업소 글"만 남기는 보수적 관련성 필터.
  * 쿼리(`상호 시군구`)만으론 동명·범용 상호가 엉뚱한 글을 끌어오므로:
  *
+ *  0) 디렉터리 사이트(BLOCKED_HOSTS)는 상호가 맞아도 제외 — 후기가 아니다,
  *  1) 도메인 어휘가 제목+발췌에 있어야 하고(카페·인테리어·시술 글 차단),
  *  2) 상호가 실제로 등장해야 한다 —
  *     전체 상호(공백 무시) 일치면 통과, 아니면 고유 토큰 다수결(2개 이하=전부,
@@ -138,6 +161,7 @@ export function filterRelevantPosts(
     tokens.length <= 2 ? tokens.length : Math.ceil(tokens.length * 0.7);
 
   return posts.filter((p) => {
+    if (isBlockedBlogHost(p.blogUrl)) return false;
     const hay = normalizeForMatch(`${p.title} ${p.snippet}`);
     if (!DOMAIN_TERMS.some((t) => hay.includes(t))) return false;
     if (!tokens.length) {
