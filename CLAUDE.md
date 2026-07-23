@@ -1,5 +1,18 @@
 # 사우나우 — 작업 지침
 
+## 작업 완료 시 (커밋·푸시)
+
+기능이 **동작 확인까지 끝나면 지시를 기다리지 말고** 커밋·푸시까지 진행한다.
+
+1. `npm run lint` — 통과해야 커밋. 실패하면 고치고 다시.
+2. `git add` 는 **이번 작업에 관련된 파일만** (`git add -A` 금지 — 크롤 산출물·로컬 설정 섞임).
+3. 커밋 — Conventional Commits + 한글 요약: `feat(map): 내 주변 진입 지연 제거`
+   `feat` `fix` `perf` `refactor` / scope: `ui` `map` `ingest` `storage` `auth` `share` `admin` …
+4. `git push origin main` — 이 저장소는 **main 직접 푸시**(브랜치·PR 안 씀).
+
+**멈추고 물어볼 것:** 실패하는 테스트/린트를 우회해야 할 때, DB 스키마·마이그레이션 변경,
+`scripts/` 크롤러가 외부에 실제 요청을 보내는 변경, 시크릿·환경변수 관련 파일.
+
 ## 공용 일러스트 (`components/illustrations/`)
 
 서비스에서 반복되는 용어(목욕탕·찜질방·온천·고온 사우나·노천·세신·24시·숙박·커뮤니티…)는
