@@ -28,7 +28,7 @@ const PREVIEW_REVIEWS = 2;
  * 부모가 좌우 px-[20px] 컨테이너를 제공해야 한다(탭 바의 -mx-[20px] 블리드 기준).
  * showLocationMap=false 면 위치 미니맵 섹션을 숨긴다(이미 지도 위인 패널 등에서 선택).
  */
-/** seed(에디터/성별 시딩)만으로 TempInfo 구성 — 집계 미전달 경로(지도 패널 등)의 폴백. */
+/** seed(에디터 시딩)만으로 TempInfo 구성 — 집계 미전달 경로(지도 패널 등)의 폴백. */
 function seedTempInfo(s: Sauna): TempInfo {
   const stat = (seed: number | null): TempStat => ({
     crowdValue: null,
@@ -38,21 +38,9 @@ function seedTempInfo(s: Sauna): TempInfo {
     reportCount: 0,
     latestReportAt: null,
   });
-  const room = (g: "m" | "f") =>
-    stat(
-      (g === "m" ? s.sauna_room_temp_m : s.sauna_room_temp_f) ??
-        s.sauna_room_temp ??
-        null,
-    );
-  const cold = (g: "m" | "f") =>
-    stat(
-      (g === "m" ? s.cold_bath_temp_m : s.cold_bath_temp_f) ??
-        s.cold_bath_temp ??
-        null,
-    );
   return {
-    male: { saunaRoom: room("m"), coldBath: cold("m") },
-    female: { saunaRoom: room("f"), coldBath: cold("f") },
+    saunaRoom: stat(s.sauna_room_temp ?? null),
+    coldBath: stat(s.cold_bath_temp ?? null),
   };
 }
 

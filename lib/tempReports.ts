@@ -6,17 +6,14 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 /**
  * 온도 제보 — DB(sauna_temp_reports) 쓰기 + 집계(sauna_temp_agg) 재조회.
- * 로그인 사용자만 작성(RLS 본인 행). 1인 1제보/(매장×탕) upsert.
+ * 로그인 사용자만 작성(RLS 본인 행). 1인 1제보/매장 upsert(0027: 남/여 구분 없음).
  * 표시 온도는 직접 덮어쓰지 않고 제보를 쌓아 median 으로 자동 산출(reviews.ts 미러).
  */
-
-type Gender = "male" | "female";
 
 /** 온도 제보 작성/수정(upsert). room/cold 둘 중 하나 이상 필요. 성공 시 true. */
 export async function upsertTempReport(
   saunaId: string,
   userId: string,
-  gender: Gender,
   saunaRoomTemp: number | null,
   coldBathTemp: number | null,
 ): Promise<boolean> {
@@ -26,36 +23,32 @@ export async function upsertTempReport(
     {
       sauna_id: saunaId,
       user_id: userId,
-      gender,
       sauna_room_temp: saunaRoomTemp,
       cold_bath_temp: coldBathTemp,
     },
-    { onConflict: "sauna_id,user_id,gender" },
+    { onConflict: "sauna_id,user_id" },
   );
   return !error;
 }
 
-/** 내 온도 제보 삭제(해당 탕). */
+/** 내 온도 제보 삭제. */
 export async function deleteTempReport(
   saunaId: string,
   userId: string,
-  gender: Gender,
 ): Promise<boolean> {
   const supabase = createSupabaseBrowserClient();
   const { error } = await supabase
     .from("sauna_temp_reports")
     .delete()
     .eq("sauna_id", saunaId)
-    .eq("user_id", userId)
-    .eq("gender", gender);
+    .eq("user_id", userId);
   return !error;
 }
 
-/** 내 제보값(해당 탕) — 제보 시트 초기값 채우기용. 없으면 null. */
+/** 내 제보값 — 제보 시트 초기값 채우기용. 없으면 null. */
 export async function fetchMyTempReport(
   saunaId: string,
   userId: string,
-  gender: Gender,
 ): Promise<{ saunaRoomTemp: number | null; coldBathTemp: number | null } | null> {
   const supabase = createSupabaseBrowserClient();
   const { data, error } = await supabase
@@ -63,7 +56,6 @@ export async function fetchMyTempReport(
     .select("sauna_room_temp, cold_bath_temp")
     .eq("sauna_id", saunaId)
     .eq("user_id", userId)
-    .eq("gender", gender)
     .maybeSingle();
   if (error || !data) return null;
   return {
@@ -85,8 +77,8 @@ export interface CrowdTempCell {
 }
 
 export interface CrowdTempInfo {
-  male: { saunaRoom: CrowdTempCell; coldBath: CrowdTempCell };
-  female: { saunaRoom: CrowdTempCell; coldBath: CrowdTempCell };
+  saunaRoom: CrowdTempCell;
+  coldBath: CrowdTempCell;
 }
 
 /** 매장 온도 집계만(crowd) 재조회. 제보 직후 TempHero 즉시 반영용. */
@@ -99,10 +91,8 @@ export async function fetchCrowdTempInfo(
   });
   if (error) return null;
 
-  const cell = (gender: Gender, metric: "sauna_room" | "cold_bath"): CrowdTempCell => {
-    const r = (data ?? []).find(
-      (x: any) => x.gender === gender && x.metric === metric,
-    );
+  const cell = (metric: "sauna_room" | "cold_bath"): CrowdTempCell => {
+    const r = (data ?? []).find((x: any) => x.metric === metric);
     const median = r?.crowd_median != null ? Number(r.crowd_median) : null;
     const count = r?.report_count ?? 0;
     return {
@@ -115,11 +105,5 @@ export async function fetchCrowdTempInfo(
     };
   };
 
-  return {
-    male: { saunaRoom: cell("male", "sauna_room"), coldBath: cell("male", "cold_bath") },
-    female: {
-      saunaRoom: cell("female", "sauna_room"),
-      coldBath: cell("female", "cold_bath"),
-    },
-  };
+  return { saunaRoom: cell("sauna_room"), coldBath: cell("cold_bath") };
 }

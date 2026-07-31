@@ -170,10 +170,13 @@ export interface TempStat {
   latestReportAt: string | null; // 가장 최근 제보 시각(ISO)
 }
 
-/** 매장 온도 정보 — 남/여 × 사우나실/냉탕. TempHero 표시용. */
+/**
+ * 매장 온도 정보 — 사우나실/냉탕. TempHero 표시용.
+ * 남/여 축은 0027 에서 제거(제보·표시 모두 단일 축). saunas 의 *_m/_f 컬럼은 DB 에만 남아 있다.
+ */
 export interface TempInfo {
-  male: { saunaRoom: TempStat; coldBath: TempStat };
-  female: { saunaRoom: TempStat; coldBath: TempStat };
+  saunaRoom: TempStat;
+  coldBath: TempStat;
 }
 
 /** 사우나 최상위 타입 분류. 모든 행은 기본 대중탕, 플래그로 확장(복수 가능). */

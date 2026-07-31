@@ -396,33 +396,14 @@ function resolveTempStat(
 }
 
 /**
- * 매장 온도 정보(남/여 × 사우나실/냉탕) — 최근 30일 제보 median 자동 집계 + 에디터 시딩 폴백.
- * 0014 미적용(RPC 없음)이면 all-seed 로 폴백(섹션이 비어도 안전, getSaunaReviews 패턴).
- * seed 의 성별값(0012)이 없으면 공통값(sauna_room_temp/cold_bath_temp)으로 폴백.
+ * 매장 온도 정보(사우나실/냉탕) — 최근 30일 제보 median 자동 집계 + 에디터 시딩 폴백.
+ * RPC 미적용(0027 이전 스키마)이면 all-seed 로 폴백(섹션이 비어도 안전, getSaunaReviews 패턴).
  */
 export async function getSaunaTempInfo(
   saunaId: string,
   seed: Sauna,
 ): Promise<TempInfo> {
-  const seedFor = (
-    gender: "male" | "female",
-    metric: "sauna_room" | "cold_bath",
-  ): number | null => {
-    if (metric === "sauna_room") {
-      return (
-        (gender === "male" ? seed.sauna_room_temp_m : seed.sauna_room_temp_f) ??
-        seed.sauna_room_temp ??
-        null
-      );
-    }
-    return (
-      (gender === "male" ? seed.cold_bath_temp_m : seed.cold_bath_temp_f) ??
-      seed.cold_bath_temp ??
-      null
-    );
-  };
-
-  // RPC 행 → 빠른 조회 맵(`${gender}:${metric}`).
+  // RPC 행 → metric 조회 맵.
   const agg = new Map<
     string,
     { median: number | null; count: number; latest: string | null }
@@ -432,7 +413,7 @@ export async function getSaunaTempInfo(
   });
   if (!error) {
     for (const r of (data ?? []) as any[]) {
-      agg.set(`${r.gender}:${r.metric}`, {
+      agg.set(r.metric, {
         median: r.crowd_median != null ? Number(r.crowd_median) : null,
         count: r.report_count ?? 0,
         latest: r.latest_report_at ?? null,
@@ -441,27 +422,21 @@ export async function getSaunaTempInfo(
   }
 
   const stat = (
-    gender: "male" | "female",
     metric: "sauna_room" | "cold_bath",
+    seedValue: number | null,
   ): TempStat => {
-    const a = agg.get(`${gender}:${metric}`);
+    const a = agg.get(metric);
     return resolveTempStat(
       a?.median ?? null,
       a?.count ?? 0,
       a?.latest ?? null,
-      seedFor(gender, metric),
+      seedValue,
     );
   };
 
   return {
-    male: {
-      saunaRoom: stat("male", "sauna_room"),
-      coldBath: stat("male", "cold_bath"),
-    },
-    female: {
-      saunaRoom: stat("female", "sauna_room"),
-      coldBath: stat("female", "cold_bath"),
-    },
+    saunaRoom: stat("sauna_room", seed.sauna_room_temp ?? null),
+    coldBath: stat("cold_bath", seed.cold_bath_temp ?? null),
   };
 }
 

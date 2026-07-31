@@ -9,8 +9,6 @@ import {
   type CrowdTempInfo,
 } from "@/lib/tempReports";
 
-type Gender = "male" | "female";
-
 const SAUNA_MIN = 40;
 const SAUNA_MAX = 110;
 const COLD_MIN = 1;
@@ -20,7 +18,7 @@ const COLD_DEFAULT = 15;
 
 /**
  * 온도 제보 시트 — 로그인 사용자 전용(부모가 로그인 후에만 연다).
- * 남/여 토글 + 사우나실·냉탕 스테퍼(min/max = DB CHECK 일치). 1인 1제보/탕(upsert).
+ * 사우나실·냉탕 스테퍼(min/max = DB CHECK 일치). 1인 1제보/매장(upsert, 0027: 남/여 구분 없음).
  * 제출 시 집계(crowd)를 재조회해 onDone 으로 전달 → TempHero 즉시 반영. LoginSheet 시트 스타일.
  */
 export function TempReportSheet({
@@ -28,29 +26,26 @@ export function TempReportSheet({
   onClose,
   saunaId,
   userId,
-  gender: initialGender,
   onDone,
 }: {
   open: boolean;
   onClose: () => void;
   saunaId: string;
   userId: string;
-  gender: Gender;
   onDone: (crowd: CrowdTempInfo) => void;
 }) {
-  const [gender, setGender] = useState<Gender>(initialGender);
   const [sauna, setSauna] = useState(SAUNA_DEFAULT);
   const [cold, setCold] = useState(COLD_DEFAULT);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
-  // 현재 성별의 내 기존 제보로 스테퍼 초기화(있으면). 부모가 열릴 때만 마운트하므로
-  // gender/done 초기화는 useState 초기값이 담당(동기 setState-in-effect 회피).
+  // 내 기존 제보로 스테퍼 초기화(있으면). 부모가 열릴 때만 마운트하므로
+  // done 초기화는 useState 초기값이 담당(동기 setState-in-effect 회피).
   useEffect(() => {
     if (!open) return;
     let alive = true;
     void (async () => {
-      const mine = await fetchMyTempReport(saunaId, userId, gender);
+      const mine = await fetchMyTempReport(saunaId, userId);
       if (!alive) return;
       setSauna(mine?.saunaRoomTemp ?? SAUNA_DEFAULT);
       setCold(mine?.coldBathTemp ?? COLD_DEFAULT);
@@ -58,14 +53,14 @@ export function TempReportSheet({
     return () => {
       alive = false;
     };
-  }, [open, saunaId, userId, gender]);
+  }, [open, saunaId, userId]);
 
   if (!open) return null;
 
   const submit = async () => {
     if (busy) return;
     setBusy(true);
-    const ok = await upsertTempReport(saunaId, userId, gender, sauna, cold);
+    const ok = await upsertTempReport(saunaId, userId, sauna, cold);
     if (ok) {
       const crowd = await fetchCrowdTempInfo(saunaId);
       if (crowd) onDone(crowd);
@@ -111,33 +106,6 @@ export function TempReportSheet({
                 직접 재거나 표지판에서 본 온도를 알려주세요. 제보가 모이면 평균값으로
                 보정돼요.
               </p>
-
-              {/* 남/여 토글 */}
-              <div
-                role="tablist"
-                aria-label="남탕 여탕 선택"
-                className="mx-auto mt-[16px] flex w-fit items-center gap-[2px] rounded-full bg-[#F2F0ED] p-[3px]"
-              >
-                {(["male", "female"] as Gender[]).map((g) => {
-                  const active = g === gender;
-                  return (
-                    <button
-                      key={g}
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => setGender(g)}
-                      className={`rounded-full px-[18px] py-[6px] text-[13px] font-semibold transition-colors ${
-                        active
-                          ? "bg-white text-ink shadow-[0_1px_4px_rgba(0,0,0,0.10)]"
-                          : "text-muted"
-                      }`}
-                    >
-                      {g === "male" ? "남탕" : "여탕"}
-                    </button>
-                  );
-                })}
-              </div>
 
               <div className="mt-[18px] flex flex-col gap-[12px]">
                 <Stepper
