@@ -241,6 +241,9 @@ export function NaverMapView({
     Boolean(initialCenter) && saunas.length === 0,
   );
   const [isDesktop, setIsDesktop] = useState(false); // lg+ = 좌측 패널, 그 미만 = 바텀시트
+  // 모바일 바텀시트가 지도를 가리는 높이(px) — 지도 중심 보정·플로팅 버튼 위치의 기준.
+  const [listCover, setListCover] = useState(0);
+  const [detailCover, setDetailCover] = useState(0);
   const meMarkerRef = useRef<any>(null); // 내 위치 파란 점
   // 현재 결과를 가져온 검색 중심(여기서 멀어지면 "이 지역 재검색"을 띄운다).
   const searchCenterRef = useRef<GeoPoint | null>(initialCenter ?? null);
@@ -250,6 +253,42 @@ export function NaverMapView({
   useEffect(() => {
     selectedRef.current = selected;
   }, [selected]);
+
+  // 오버레이가 차지하는 영역 — 데스크톱은 좌측 패널 폭(x), 모바일은 바텀시트 높이(y).
+  // 상세 시트는 목록 시트 위에 뜨므로 둘 중 더 많이 가리는 쪽이 실제 가림 높이다.
+  const coverPx = isDesktop
+    ? 0
+    : panelId
+      ? Math.max(listCover, detailCover)
+      : listCover;
+  const occupiedX = isDesktop ? (collapsed ? 0 : 400) + (panelId ? 400 : 0) : 0;
+
+  // 지도 이동의 단일 창구 — 오버레이(좌측 패널·바텀시트)를 뺀 '보이는 지도 영역'의
+  // 중앙에 목표 좌표가 오도록 중심을 보정한다. 화면 오프셋에서 y 는 아래로 증가하므로,
+  // 중심을 가림 높이의 절반만큼 아래로 밀면 목표는 그만큼 위(=보이는 영역 중앙)로 온다.
+  function centerOn(
+    point: GeoPoint,
+    opts?: { zoom?: number; animate?: boolean },
+  ) {
+    const naver = window.naver;
+    const map = mapRef.current;
+    if (!naver || !map) return;
+    // 줌을 먼저 확정해야 아래 픽셀 보정이 그 줌 기준으로 계산된다.
+    if (opts?.zoom != null && map.getZoom() !== opts.zoom) map.setZoom(opts.zoom);
+    const target = new naver.maps.LatLng(point.lat, point.lng);
+    const x = occupiedX;
+    const y = coverPx;
+    let dest = target;
+    if (x > 0 || y > 0) {
+      const proj = map.getProjection();
+      const pt = proj.fromCoordToOffset(target);
+      dest = proj.fromOffsetToCoord(
+        new naver.maps.Point(pt.x - x / 2, pt.y + y / 2),
+      );
+    }
+    if (opts?.animate === false) map.setCenter(dest);
+    else map.panTo(dest);
+  }
 
   // 뷰포트 폭으로 패널 형태 결정 — lg(1024px)+ 좌측 패널 / 미만 바텀시트.
   useEffect(() => {
@@ -311,7 +350,11 @@ export function NaverMapView({
             zIndex: 50,
             icon: { content: ME_DOT, anchor: new naver.maps.Point(0, 0) },
           });
-        map.morph(ll, 14); // 개별 핀이 보이는 줌으로 내 주변을 펼친다
+        // 개별 핀이 보이는 줌으로 내 주변을 펼치되, 바텀시트에 가려지지 않는 영역의 중앙에 둔다.
+        centerOn(
+          { lat: pos.coords.latitude, lng: pos.coords.longitude },
+          { zoom: 14 },
+        );
       },
       (err) => {
         setLocating(false);
@@ -591,14 +634,20 @@ export function NaverMapView({
   // 내 위치(initialCenter)로 확실히 이동 + 파란 점 — 지도가 준비된 직후 1회 적용.
   // init 에서 center 를 잡지만, 이 효과가 status=ready 시점에 다시 보장하므로
   // 좌표만 바뀌는 클라이언트 내비(같은 /map 경로 유지)도 커버한다.
+  // 바텀시트 높이는 마운트 직후엔 아직 0 이라, 시트가 정착해 가림 높이가 잡히면
+  // 같은 좌표로 한 번 더 보정한다(그 뒤 사용자가 시트를 끌어도 지도는 건드리지 않음).
+  const initCenteredRef = useRef<{ key: string; cover: number } | null>(null);
   useEffect(() => {
     if (!initialCenter || status !== "ready") return;
     const naver = window.naver;
     const map = mapRef.current;
     if (!naver || !map) return;
+    const key = `${initialCenter.lat},${initialCenter.lng}`;
+    const prev = initCenteredRef.current;
+    if (prev && prev.key === key && (prev.cover > 0 || coverPx === 0)) return;
+    initCenteredRef.current = { key, cover: coverPx };
     const ll = new naver.maps.LatLng(initialCenter.lat, initialCenter.lng);
-    map.setCenter(ll);
-    map.setZoom(14);
+    centerOn(initialCenter, { zoom: 14, animate: false });
     if (meMarkerRef.current) meMarkerRef.current.setPosition(ll);
     else
       meMarkerRef.current = new naver.maps.Marker({
@@ -608,7 +657,23 @@ export function NaverMapView({
         icon: { content: ME_DOT, anchor: new naver.maps.Point(0, 0) },
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, initialCenter?.lat, initialCenter?.lng]);
+  }, [status, initialCenter?.lat, initialCenter?.lng, coverPx]);
+
+  // 상세 시트를 열면 그 시트에 가려지지 않는 영역의 중앙으로 해당 핀을 다시 잡아준다.
+  // 시트 높이가 잡힌 뒤(detailCover>0) 한 번만 — 이미 선택돼 있던 핀을 눌러도 동작한다.
+  const detailCenteredRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!panelId) {
+      detailCenteredRef.current = null;
+      return;
+    }
+    if (isDesktop || !detailCover || detailCenteredRef.current === panelId) return;
+    const s = withLocRef.current.find((x) => x.id === panelId);
+    if (!s) return;
+    detailCenteredRef.current = panelId;
+    centerOn(s.location);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panelId, detailCover, isDesktop]);
 
   // 재검색·필터로 노출 목록이 바뀌면 마커를 다시 그린다(withLocRef 는 렌더 시 이미 최신).
   useEffect(() => {
@@ -662,23 +727,8 @@ export function NaverMapView({
     if (prev && prev !== selected) styleMarker(prev); // 이전 선택 핀 원복(호버 중이면 호버 유지)
     styleMarker(selected);
     const sel = selected && withLoc.find((s) => s.id === selected);
-    if (sel && !suppressPanRef.current) {
-      const target = new naver.maps.LatLng(sel.location.lat, sel.location.lng);
-      // 데스크톱 좌측 오버레이(목록 400 + 상세 400, 접힘·열림 상태별)를 제외한
-      // '보이는 지도 영역'의 중앙에 핀이 오도록 패널 폭의 절반만큼 서쪽으로 옮겨 panTo.
-      const occupied = isDesktop
-        ? (collapsed ? 0 : 400) + (panelId ? 400 : 0)
-        : 0;
-      if (occupied > 0) {
-        const proj = mapRef.current.getProjection();
-        const pt = proj.fromCoordToOffset(target);
-        mapRef.current.panTo(
-          proj.fromOffsetToCoord(new naver.maps.Point(pt.x - occupied / 2, pt.y)),
-        );
-      } else {
-        mapRef.current.panTo(target);
-      }
-    }
+    // 좌측 패널(데스크톱)·바텀시트(모바일)를 뺀 '보이는 지도 영역' 중앙으로.
+    if (sel && !suppressPanRef.current) centerOn(sel.location);
     suppressPanRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
@@ -696,6 +746,10 @@ export function NaverMapView({
   }, [hovered]);
 
   const showFallback = status === "nokey" || status === "error" || status === "authfail";
+  // 모바일 플로팅 UI(줌·현재위치·리스트로 보기·재검색·토스트)는 바텀시트 위에 얹는다 —
+  // 시트를 끌어 올리거나 내리면 그만큼 같이 움직여 가려지지 않게. (데스크톱은 클래스 그대로)
+  const floatBottom = (extra: number) =>
+    !isDesktop && coverPx > 0 ? { bottom: coverPx + extra } : undefined;
   // 패널 대상(목록에서 사라지면 자동으로 닫힘 처리됨).
   const panelSauna = panelId
     ? (saunaList.find((s) => s.id === panelId) ?? null)
@@ -771,6 +825,7 @@ export function NaverMapView({
           좌측 패널이 열려있으면 '남은 지도 영역' 기준 중앙으로(패널 폭만큼 오프셋). */}
       {status === "ready" && (showResearch || researching) && (
         <div
+          style={floatBottom(64)}
           className={`absolute bottom-[238px] right-0 z-[6] flex justify-center transition-[left] duration-300 lg:bottom-[78px] ${
             collapsed
               ? panelSauna
@@ -802,6 +857,7 @@ export function NaverMapView({
           데스크톱은 좌측 패널 폭만큼 오프셋해 '남은 지도 영역' 중앙에 둔다. */}
       {status === "ready" && !showFallback && (
         <div
+          style={floatBottom(12)}
           className={`pointer-events-none absolute bottom-[186px] right-0 z-[6] flex justify-center transition-[left] duration-300 lg:bottom-[24px] ${
             collapsed
               ? panelSauna
@@ -825,7 +881,10 @@ export function NaverMapView({
 
       {/* 우측 기능 레일 — 줌(위) · 현재 위치(맨 아래). 하단 정렬. */}
       {status === "ready" && (
-        <div className="absolute bottom-[186px] right-[16px] z-[7] flex flex-col items-center gap-[18px] lg:bottom-[24px]">
+        <div
+          style={floatBottom(12)}
+          className="absolute bottom-[186px] right-[16px] z-[7] flex flex-col items-center gap-[18px] lg:bottom-[24px]"
+        >
           {/* 줌 +/- 그룹 */}
           <div className="flex flex-col overflow-hidden rounded-[12px] bg-white shadow-[0_3px_12px_rgba(0,0,0,0.18)]">
             <button
@@ -865,7 +924,10 @@ export function NaverMapView({
 
       {/* 위치 권한 안내 토스트 */}
       {geoMsg && (
-        <div className="absolute inset-x-0 bottom-[244px] z-[8] flex justify-center px-[24px]">
+        <div
+          style={floatBottom(70)}
+          className="absolute inset-x-0 bottom-[244px] z-[8] flex justify-center px-[24px]"
+        >
           <div className="max-w-[320px] rounded-[14px] bg-ink/90 px-[14px] py-[10px] text-center text-[12px] font-medium leading-[1.5] text-white shadow-[0_4px_16px_rgba(0,0,0,0.28)]">
             {geoMsg}
           </div>
@@ -960,8 +1022,13 @@ export function NaverMapView({
       {/* ── 모바일(lg 미만): 네이버지도식 바텀시트 ── */}
       {!showFallback && !isDesktop && (
         <>
-          {/* 목록 바텀시트 — 핸들 드래그로 peek/half/full 전환 */}
-          <BottomSheet zClassName="z-[8]" peekPx={170}>
+          {/* 목록 바텀시트 — 핸들 드래그로 자유 신축. 진입 시엔 지도를 넉넉히 남긴다. */}
+          <BottomSheet
+            zClassName="z-[8]"
+            peekPx={170}
+            restRatio={0.62}
+            onCoverChange={setListCover}
+          >
             <MapSidePanel
               saunas={withLoc}
               loading={listLoading}
@@ -986,6 +1053,8 @@ export function NaverMapView({
               key={panelId}
               zClassName="z-[9]"
               withClose
+              restRatio={0.56}
+              onCoverChange={setDetailCover}
               onClose={() => setPanelId(null)}
             >
               <MapDetailPanel

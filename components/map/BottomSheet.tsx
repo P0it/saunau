@@ -15,14 +15,20 @@ const TOP_GAP = 56; // full 스냅에서 위로 남겨두는 지도 영역(px)
 export function BottomSheet({
   children,
   peekPx = 150,
+  restRatio = 0.58,
   withClose = false,
   onClose,
+  onCoverChange,
   zClassName = "z-[8]",
 }: {
   children: ReactNode;
   peekPx?: number;
+  /** 진입 시 정착 위치(시트 상단이 화면 높이의 몇 %). 클수록 지도가 더 넓게 남는다. */
+  restRatio?: number;
   withClose?: boolean;
   onClose?: () => void;
+  /** 시트가 실제로 가리는 높이(px). 지도 중심 보정·플로팅 버튼 위치에 쓴다. 드래그가 끝났을 때만 알린다. */
+  onCoverChange?: (px: number) => void;
   zClassName?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -45,14 +51,19 @@ export function BottomSheet({
     const ro = new ResizeObserver(() => {
       const nh = el.offsetHeight;
       setH(nh);
-      setY((prev) =>
-        prev === null && nh ? Math.round(nh * (withClose ? 0.32 : 0.46)) : prev,
-      );
+      setY((prev) => (prev === null && nh ? Math.round(nh * restRatio) : prev));
     });
     ro.observe(el);
     return () => ro.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 가리는 높이를 부모에 알린다 — 드래그 중엔 매 프레임 리렌더가 되므로 정착했을 때만.
+  useEffect(() => {
+    if (dragging || y === null || !h) return;
+    onCoverChange?.(Math.max(0, h - y));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [h, y, dragging]);
 
   function onPointerDown(e: React.PointerEvent) {
     setDragging(true);
