@@ -1,9 +1,10 @@
 /**
  * 네이버 상세 데이터 백필 (영업시간·편의시설·요금표).  수동/일회성.
  *
- *   pnpm crawl:naver-hours -- --limit 1000 --sleep 1500       # placeId 보유분 상세 수집
+ *   pnpm crawl:naver-hours -- --limit 1000 --sleep 1500       # placeId 보유분 미수집분 수집
  *   pnpm crawl:naver-hours -- --limit 30 --dry                # 무엇이 채워지는지만 출력
- *   pnpm crawl:naver-hours -- --force --limit 50              # 이미 수집한 것도 갱신
+ *   pnpm crawl:naver-hours -- --refresh 30 --limit 500        # 30일 넘게 안 본 것부터 갱신(권장)
+ *   pnpm crawl:naver-hours -- --force --limit 50              # 동기화 시각 무시하고 오래된 순 갱신
  *
  * 이미 매칭해 둔 saunas.naver_place_id 로 /home 만 받으면 **한 번에** 요일별 영업시간 +
  * 편의시설(conveniences) + 요금표(Menu 노드)가 다 들어온다(재매칭·추가요청 불필요).
@@ -14,7 +15,12 @@
  *  - amenities(편의시설 배열) + has_parking(주차 파생, 비었을 때만).
  *  - price_list(요금표 [{name,price}]) + price(대표 입장료, 비었을 때만).
  * 사전: 0014_hours_json.sql + 0017_naver_detail.sql 적용.
- * 재개 가능: hours_synced_at 있으면 스킵(--force 무시).
+ * 재개 가능: 기본은 hours_synced_at 없는 것만(1회성 백필).
+ *
+ * ⚠ 요금·영업시간은 **변한다**. 기본 모드만 돌리면 한 번 수집한 매장은 영원히 갱신되지
+ *   않는다(실측: 여주신해온천 사우나 10,000→8,000 반영 안 됨, 요금표를 나중에 등록한
+ *   매장은 계속 빈 채). 정기적으로 `--refresh <일수>` 로 오래된 것부터 훑을 것.
+ *   price(대표가)는 여기서 안 건드리므로 갱신 후 `pnpm derive:price` 를 이어서 실행.
  * 레이트리밋(429): 연속 차단 시 지수 백오프, 임계 초과 시 배치 중단(재실행으로 이어짐).
  */
 import { config } from "dotenv";
@@ -46,6 +52,10 @@ async function main() {
   const sleepMs = Number(arg("sleep") ?? "1500");
   const dry = flag("dry");
   const force = flag("force");
+  // --refresh [일수] — 지정 일수보다 오래된 동기화분을 갱신 대상으로. 값 생략 시 30일.
+  const refreshRaw = arg("refresh");
+  const refreshDays =
+    refreshRaw === undefined ? null : Number(refreshRaw) > 0 ? Number(refreshRaw) : 30;
   const maxBlocks = Number(arg("max-blocks") ?? "8");
   const MAX_BACKOFF_MS = 60_000;
 
@@ -55,9 +65,22 @@ async function main() {
     .from("saunas")
     .select("id, name, naver_place_id, hours, is_24h, has_parking, price")
     .not("naver_place_id", "is", null)
-    .order("open_date", { ascending: false, nullsFirst: false })
     .limit(limit);
-  if (!force) q = q.is("hours_synced_at", null);
+
+  if (refreshDays != null) {
+    // 갱신 모드 — 미수집 + N일 지난 것. **오래된 순**이라 반복 실행이 전체를 한 바퀴 돈다.
+    const cutoff = new Date(Date.now() - refreshDays * 86_400_000).toISOString();
+    q = q
+      .or(`hours_synced_at.is.null,hours_synced_at.lt.${cutoff}`)
+      .order("hours_synced_at", { ascending: true, nullsFirst: true });
+  } else if (force) {
+    // 전량 재수집 — 오래된 순(예전엔 open_date 순이라 --limit 이 매번 같은 앞부분만 재크롤).
+    q = q.order("hours_synced_at", { ascending: true, nullsFirst: true });
+  } else {
+    q = q
+      .is("hours_synced_at", null)
+      .order("open_date", { ascending: false, nullsFirst: false });
+  }
 
   const { data, error } = await q;
   if (error) throw new Error(`대상 조회 실패: ${error.message}`);
