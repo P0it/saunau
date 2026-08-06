@@ -36,9 +36,12 @@ export type PhotoSourceKind =
   | "editor"
   | "owner";
 const SOURCE_PRIORITY: Record<string, number> = {
-  naver_crawl: 1,
-  website: 2, // 업체 공식 사이트(권리자 본인 자산) — google/blog 보다 신뢰
-  google: 2,
+  // 구글은 업주가 올린 사진인지 알 방법이 없다(authorAttributions 는 올린 계정 표시명뿐).
+  // 네이버는 mediaSource="business" 로 업체제공을 구분해 주므로 naver_crawl 이 더 신뢰된다.
+  // 또 국내 업소는 네이버 쪽 자료가 더 많고 정확하다 → 구글은 네이버가 없을 때의 폴백.
+  google: 1,
+  naver_crawl: 2, // 네이버 업체제공 사진(mediaSource="business")
+  website: 2, // 업체 공식 사이트(권리자 본인 자산)
   licensed: 2,
   editor: 3,
   owner: 4,
@@ -75,21 +78,69 @@ interface Optimized {
   height: number;
 }
 
+/** SVG 텍스트에 그대로 넣을 수 없는 문자 이스케이프. */
+function escapeXml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * 출처 워터마크 오버레이(우하단). 사진 자체에 출처를 박아 어디로 퍼가도 출처가 붙어 있게 한다.
+ *
+ * 이미지 폭에 비례해 크기를 잡되(2.6%) 8~13px 로 묶는다 — 갤러리 720px 에서 ~13px,
+ * 썸네일 160px 에서 ~8px. 밝은 사진에서도 읽히도록 반투명 먹색 알약 위에 흰 글씨를 얹는다.
+ */
+function watermarkSvg(w: number, h: number, text: string): Buffer {
+  const fs = Math.max(8, Math.min(13, Math.round(w * 0.026)));
+  const padX = Math.round(fs * 0.55);
+  const padY = Math.round(fs * 0.34);
+  const margin = Math.round(fs * 0.6);
+  // 한글 폭은 대략 글자크기와 같고 영문·숫자는 그 절반으로 잡아 배경 알약 폭을 추정한다.
+  const est = [...text].reduce((n, ch) => n + (/[\x00-\x7F]/.test(ch) ? 0.52 : 1), 0);
+  const boxW = Math.round(est * fs + padX * 2);
+  const boxH = fs + padY * 2;
+  const x = w - boxW - margin;
+  const y = h - boxH - margin;
+  return Buffer.from(
+    `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">` +
+      `<rect x="${x}" y="${y}" width="${boxW}" height="${boxH}" rx="${Math.round(boxH / 2)}" fill="#000" fill-opacity="0.42"/>` +
+      `<text x="${x + boxW / 2}" y="${y + boxH / 2}" font-family="Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif"` +
+      ` font-size="${fs}" fill="#fff" fill-opacity="0.94" text-anchor="middle" dominant-baseline="central">${escapeXml(text)}</text>` +
+      `</svg>`,
+  );
+}
+
 /**
  * 원본 바이트 → WebP 재인코딩(+ 프로필별 폭 상한, EXIF 회전 보정).
  * 읽기 불가/손상 이미지는 null → 그 사진은 버린다(행 생성 안 함).
+ *
+ * watermark 를 주면 우하단에 출처를 합성한다(예: "출처 네이버 플레이스").
  */
 export async function optimizeImage(
   input: Uint8Array,
   profile: SizeProfile = "gallery",
+  watermark?: string | null,
 ): Promise<Optimized | null> {
   const { width, quality } = PROFILES[profile];
   try {
-    const out = await sharp(input, { failOn: "none" })
+    const base = sharp(input, { failOn: "none" })
       .rotate() // EXIF orientation 반영 후 메타 제거
-      .resize({ width, withoutEnlargement: true })
-      .webp({ quality })
-      .toBuffer({ resolveWithObject: true });
+      .resize({ width, withoutEnlargement: true });
+
+    let pipeline = base;
+    // thumb(160px)은 64px 로 렌더돼 워터마크가 읽히지도 않으면서 화면을 다 잡아먹는다 → 생략.
+    if (watermark && profile !== "thumb") {
+      // 합성엔 실제 렌더 크기가 필요 → 리사이즈까지 끝낸 버퍼를 먼저 만든다.
+      const resized = await base.toBuffer({ resolveWithObject: true });
+      pipeline = sharp(resized.data).composite([
+        { input: watermarkSvg(resized.info.width, resized.info.height, watermark), top: 0, left: 0 },
+      ]);
+    }
+
+    const out = await pipeline.webp({ quality }).toBuffer({ resolveWithObject: true });
     if (out.data.byteLength === 0) return null;
     return {
       buf: new Uint8Array(out.data),
@@ -113,6 +164,7 @@ export interface StoredPhoto {
  * 원본 사진 1장을 다운로드 → WebP 최적화 → 우리 Storage 에 업로드.
  * 다운로드·디코드·업로드 중 하나라도 실패하면 null(행 생성 안 함).
  * profile 로 표시 크기에 맞는 저장 규격을 고른다(블로그 썸네일은 반드시 "thumb").
+ * watermark 를 주면 우하단에 출처를 박아 넣는다.
  */
 export async function downloadToStorage(
   supabase: SupabaseClient,
@@ -120,6 +172,7 @@ export async function downloadToStorage(
   key: string | number,
   photo: PhotoRef,
   profile: SizeProfile = "gallery",
+  watermark?: string | null,
 ): Promise<StoredPhoto | null> {
   try {
     const res = await fetch(photo.fetchUrl ?? photo.sourceUrl, {
@@ -129,7 +182,7 @@ export async function downloadToStorage(
     const raw = new Uint8Array(await res.arrayBuffer());
     if (raw.byteLength === 0) return null;
 
-    const opt = await optimizeImage(raw, profile);
+    const opt = await optimizeImage(raw, profile, watermark);
     if (!opt) return null;
 
     const storagePath = `${saunaId}/${key}.webp`;

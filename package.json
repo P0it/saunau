@@ -17,14 +17,15 @@
     "crawl:naver-sesin": "tsx scripts/crawl-naver-sesin.ts",
     "derive:price": "tsx scripts/derive-price.ts",
     "crawl:google": "tsx scripts/crawl-google.ts",
-    "crawl:website": "tsx scripts/crawl-website.ts",
     "describe": "tsx scripts/describe.ts",
     "import:articles": "tsx scripts/import-articles.ts",
     "flag": "tsx scripts/flag.ts",
     "audit:storage": "tsx scripts/audit-storage.ts",
     "cleanup:storage": "tsx scripts/cleanup-storage.ts",
     "backfill:thumbs": "tsx scripts/backfill-blog-thumbs.ts",
-    "prune:reviews": "tsx scripts/prune-blog-reviews.ts"
+    "prune:reviews": "tsx scripts/prune-blog-reviews.ts",
+    "crawl:naver-photos": "tsx scripts/crawl-naver-photos.ts",
+    "prune:google-photos": "tsx scripts/prune-google-photos.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
