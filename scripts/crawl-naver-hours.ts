@@ -47,6 +47,11 @@ interface Row {
   price: number | null;
 }
 
+// PostgREST 는 응답을 1000행으로 자른다(서버 max-rows). --limit 을 그보다 크게 줘도
+// 조용히 1000건만 처리된다 — 전량 갱신은 이 스크립트를 **여러 번** 돌려야 한다
+// (--refresh 는 오래된 순이라 재실행이 자연히 다음 배치를 집는다).
+const PAGE_CAP = 1000;
+
 async function main() {
   const limit = Number(arg("limit") ?? "1000");
   const sleepMs = Number(arg("sleep") ?? "1500");
@@ -58,6 +63,11 @@ async function main() {
     refreshRaw === undefined ? null : Number(refreshRaw) > 0 ? Number(refreshRaw) : 30;
   const maxBlocks = Number(arg("max-blocks") ?? "8");
   const MAX_BACKOFF_MS = 60_000;
+  if (limit > PAGE_CAP) {
+    console.warn(
+      `⚠ --limit ${limit} 은 PostgREST 상한으로 ${PAGE_CAP}건만 처리됩니다. 남은 분량은 재실행하세요.`,
+    );
+  }
 
   const supabase = getAdminClient();
 
