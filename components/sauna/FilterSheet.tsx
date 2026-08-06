@@ -36,14 +36,20 @@ const TYPE_CHIPS: { value: SaunaCategory; label: string }[] = [
   { value: "hot_spring", label: "온천" },
   { value: "enzyme", label: "효소찜질방" },
 ];
+// 체육·복지시설(community)은 칩에서 뺐다 — 0030 이후 데이터 자체가 노출 보류라
+// 켜도 결과가 0곳이다. VENUE_LABEL.community 는 분류·관리용으로 남아있다.
 const VENUE_CHIPS: { value: VenueType; label: string }[] = [
   { value: "standalone", label: VENUE_LABEL.standalone },
   { value: "lodging", label: VENUE_LABEL.lodging },
-  { value: "community", label: VENUE_LABEL.community },
 ];
 
 export function matchesFilters(s: Sauna, f: SheetFilters): boolean {
   if (f.types.length && !f.types.some((t) => inCategory(s, t))) return false;
+  // 장소 유형: 선택이 있으면 그대로. 체육·복지시설은 어느 경우에도 숨긴다 —
+  // 헬스장 샤워실(◯◯헬스사우나·◯◯휘트니스사우나)·복지관 목욕탕이 목욕탕/찜질방
+  // 목록에 섞이면 서비스 신뢰가 깨진다. 서버 쪽 1차 차단은 needs_review(0030),
+  // 여기는 아직 보류 처리 안 된 행(신규 크롤 등)까지 막는 2차 방어.
+  if (s.venue_type === "community") return false;
   if (f.venues.length && !f.venues.includes(s.venue_type)) return false;
   if (f.kinds.length && !f.kinds.some((k) => s.sauna_kind.includes(k))) return false;
   if (f.sesin === "yes" && !s.has_sesin) return false;
@@ -162,6 +168,9 @@ export function FilterSheet({
                 />
               ))}
             </div>
+            <p className="mt-[8px] text-[12px] leading-[1.5] text-muted">
+              헬스장·복지관 부속 목욕시설(체육·복지시설)은 기본 목록에서 빼둡니다. 칩을 켜면 보입니다.
+            </p>
           </Section>
 
           {/* 사우나 유형(습식/건식/한증막) 필터는 sauna_kind 데이터가

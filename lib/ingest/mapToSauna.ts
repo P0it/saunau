@@ -74,6 +74,7 @@ export function mapBathToSauna(item: BathApiItem, needsReview = false): SaunaUps
   const sweat = (item.SWEATRM_YN ?? "").trim() === "Y";
   const bzstat = item.BZSTAT_SE_NM ?? "";
 
+  const venue_type = classifyVenue(name, address);
   const is_enzyme = ENZYME_RE.test(name);
   const is_jjimjilbang =
     sweat || /찜질|한증/.test(bzstat) || JJIMJIL_RE.test(name);
@@ -103,9 +104,12 @@ export function mapBathToSauna(item: BathApiItem, needsReview = false): SaunaUps
     is_jjimjilbang,
     is_hot_spring,
     is_enzyme,
-    venue_type: classifyVenue(name, address),
+    venue_type,
     is_24h,
-    needs_review: needsReview,
+    // 체육·복지시설 부속(헬스장 샤워실·복지관 목욕탕)은 카테고리째 노출 보류 —
+    // 목욕탕/찜질방 목록에 섞이면 서비스 신뢰가 깨진다. 데이터는 보존.
+    // 기존 적재분은 supabase/migrations/0030 이 동일 기준으로 백필한다.
+    needs_review: needsReview || venue_type === "community",
     slug: base,
   };
 }
