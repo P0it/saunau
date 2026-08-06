@@ -23,6 +23,7 @@ import {
   stableHoursText,
   type OurSauna,
 } from "../lib/ingest/naver/placeInfo";
+import { verifyCategory } from "../lib/ingest/naver/category";
 
 config({ path: ".env.local" });
 config();
@@ -78,6 +79,7 @@ async function main() {
     targeted: saunas.length,
     matched: 0,
     noMatch: 0,
+    wrongCategory: 0, // 좌표·상호로는 걸렸지만 업종이 카페·식당 등 → 매칭 파기
     blocked: 0,
     hoursSet: 0,
     phoneSet: 0,
@@ -145,6 +147,23 @@ async function main() {
       }
 
       const c = match.candidate;
+
+      // 업종 검증 — 좌표·상호만 보면 같은 건물의 다른 업소가 잡힌다.
+      // 실측: "나인"(강남 목욕장) → 동명 카페가 잡혀 요금표에 아메리카노가 들어왔다.
+      // placeId 를 저장하면 crawl:naver-hours·photos 가 그 자리에서 카페 데이터를
+      // 계속 긁어오므로, 여기서 끊는 게 유일한 지점이다.
+      if (verifyCategory(c.category, { ours: s.name, theirs: c.name }) === "wrong_category") {
+        summary.wrongCategory++;
+        if (!dry) {
+          await supabase
+            .from("saunas")
+            .update({ naver_synced_at: new Date().toISOString() })
+            .eq("id", s.id);
+        }
+        console.log(`  · 업종불일치 [${s.name}] → "${c.name}" [${c.category}] 매칭 파기`);
+        await sleep(sleepMs);
+        continue;
+      }
 
       // 상세(편의시설·보강 전화·구조화 영업시간) — 옵션.
       let conveniences: string[] = [];
