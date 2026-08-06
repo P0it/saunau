@@ -125,13 +125,20 @@ function str(v: unknown): string | null {
   return typeof v === "string" && v.trim() ? v.trim() : null;
 }
 
-/** list 페이지 → 후보 배열. blocked=캡차/구조불일치(후보 0 과 구분). */
+/**
+ * list 페이지 → 후보 배열. blocked=캡차/구조불일치(후보 0 과 구분).
+ * coord(위경도)를 주면 `&x=&y=` 로 위치 힌트를 실어 그 근처 결과를 상위로 끌어올린다.
+ * 흔한 상호(예: "로얄사우나")가 전국 검색 상한에 잘려 정작 우리 매장이 후보에서
+ * 빠지던 문제를 완화한다(지역명을 쿼리에 붙이면 0건이 되므로 좌표로 편향).
+ */
 export async function fetchPlaceCandidates(
   query: string,
+  coord?: { lat: number; lng: number } | null,
 ): Promise<NaverFetchResult<NaverPlaceCandidate[]>> {
   let html: string;
   try {
-    const url = `${LIST_ENDPOINT}?query=${encodeURIComponent(query)}`;
+    let url = `${LIST_ENDPOINT}?query=${encodeURIComponent(query)}`;
+    if (coord) url += `&x=${coord.lng}&y=${coord.lat}`;
     const r = await fetch(url, { headers: BROWSER_HEADERS });
     if (!r.ok) return { data: [], blocked: true };
     html = await r.text();
@@ -599,6 +606,10 @@ export interface PlaceMatch {
 // 매칭 임계값. 좌표가 있으면 거리로 강하게 식별(이름은 느슨해도 됨),
 // 없으면 이름+주소(동/시군구) 토큰 일치를 요구한다.
 const MAX_DISTANCE_M = 700;
+// 이름이 완전일치(1.0)면 거리 컷을 완화한다 — 인허가 주소 지오코딩과 네이버 좌표 사이
+// 수백m 오차로 정확히 같은 상호를 놓치던 케이스(예: 승학탕 862m) 회수. 반경 1.2km 안에
+// 상호까지 같은 별개 업소가 존재할 확률은 낮아 오매칭 위험은 미미하다.
+const MAX_DISTANCE_EXACT_M = 1200;
 const MIN_NAME_WITH_COORDS = 0.45;
 const MIN_NAME_NO_COORDS = 0.7;
 
@@ -621,7 +632,8 @@ export function pickBestMatch(
     }
 
     if (distanceM != null) {
-      if (distanceM <= MAX_DISTANCE_M && nameSim >= MIN_NAME_WITH_COORDS) {
+      const maxDist = nameSim >= 1 ? MAX_DISTANCE_EXACT_M : MAX_DISTANCE_M;
+      if (distanceM <= maxDist && nameSim >= MIN_NAME_WITH_COORDS) {
         scored.push({
           candidate: c,
           nameSim,

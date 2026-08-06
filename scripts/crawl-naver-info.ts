@@ -5,6 +5,7 @@
  *   pnpm crawl:naver-info -- --limit 30 --dry      # 무엇이 매칭/변경되는지 표만 출력(쓰기 X)
  *   pnpm crawl:naver-info -- --region 서울 --limit 100
  *   pnpm crawl:naver-info -- --force --limit 20    # 이미 수집한 것도 재시도
+ *   pnpm crawl:naver-info -- --retry-unmatched --dry --limit 40   # 과거 매칭실패분만 재시도(개선쿼리 검증)
  *
  * 사진(저작물)과 다른 경로다. pcmap.place.naver.com SSR 의 사실 데이터(영업시간/전화/주차)만
  * 읽는다(캡차 없음, 라이브 검증). 기존 컬럼은 "비어있을 때만" 채운다(에디터/공공데이터 보존).
@@ -35,6 +36,23 @@ function arg(name: string): string | undefined {
 const flag = (name: string) => process.argv.includes(`--${name}`);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * 요청 간격에 ±40% 흔들림. 고정 간격 반복 자체가 봇 신호다 —
+ * 2026-08-06 차단이 그렇게 났다(crawl-naver-photos 와 같은 대책).
+ * 이 스크립트는 검색+상세로 건당 요청이 2배라 더 조심해야 한다.
+ */
+const jitter = (ms: number) => Math.round(ms * (0.6 + Math.random() * 0.8));
+
+// 검색어에서 네이버 플레이스가 안 쓰는 법인·행정 껍데기를 제거해 브랜드 코어만 남긴다.
+// (인허가 대장은 "유한회사 힐스톤온천리조트"처럼 정식명칭이라, 붙은 채 검색하면 0건.)
+function cleanQueryName(raw: string): string {
+  const c = raw
+    .replace(/\(주\)|\(유\)|\(재\)|\(사\)|㈜|주식회사|유한회사|합자회사|의료법인|사회복지법인/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return c || raw;
+}
+
 interface SaunaRow {
   id: string;
   name: string;
@@ -52,10 +70,13 @@ interface SaunaRow {
 async function main() {
   const limit = Number(arg("limit") ?? "50");
   const region = arg("region"); // sido prefix 필터(선택)
-  const sleepMs = Number(arg("sleep") ?? "700");
+  const sleepMs = Number(arg("sleep") ?? "1200");
   const dry = flag("dry");
   const force = flag("force");
   const noDetail = flag("no-detail");
+  // 이전에 매칭 실패로 기록된 매장만 재시도(naver_synced_at 있는데 place_id 없음).
+  // 쿼리 전략 개선(지역토큰 제거) 후 이 실패분을 다시 훑을 때 쓴다.
+  const retryUnmatched = flag("retry-unmatched");
 
   const supabase = getAdminClient();
 
@@ -68,7 +89,11 @@ async function main() {
     .eq("needs_review", false)
     .order("open_date", { ascending: false, nullsFirst: false })
     .limit(limit);
-  if (!force) q = q.is("naver_synced_at", null);
+  if (retryUnmatched) {
+    q = q.not("naver_synced_at", "is", null).is("naver_place_id", null);
+  } else if (!force) {
+    q = q.is("naver_synced_at", null);
+  }
   if (region) q = q.like("sido", `${region}%`);
 
   const { data, error } = await q;
@@ -106,10 +131,19 @@ async function main() {
         lat: pt?.lat ?? null,
         lng: pt?.lng ?? null,
       };
-      const query = [s.name, s.sigungu ?? s.sido].filter(Boolean).join(" ");
+      // 검색 전략(중요):
+      //  '상호만'(지역 토큰 없이)으로 찾고, 좌표가 있으면 x,y 힌트로 우리 위치 근처를
+      //  상위에 끌어올린다. 네이버 place/list 는 "상호 시군구"처럼 지역명을 붙이면 문자열
+      //  전체를 매칭해 0건이 되기 때문(진단으로 확정). 전국 동명업소가 섞여도 pickBestMatch
+      //  의 좌표 게이트(≤700m, 이름정확시 ≤1200m)로 정확히 걸러진다.
+      const cleaned = cleanQueryName(s.name);
+      const coord =
+        ours.lat != null && ours.lng != null
+          ? { lat: ours.lat, lng: ours.lng }
+          : null;
 
-      const { data: candidates, blocked } = await fetchPlaceCandidates(query);
-      if (blocked) {
+      const first = await fetchPlaceCandidates(cleaned, coord);
+      if (first.blocked) {
         // 429/캡차/구조변경 → 스킵마커 찍지 않음(다음 실행에서 재시도).
         summary.blocked++;
         consecBlocks++;
@@ -132,6 +166,7 @@ async function main() {
       }
       consecBlocks = 0; // 정상 응답 → 연속 차단 카운터 리셋
 
+      const candidates = first.data;
       const match = pickBestMatch(candidates, ours);
       if (!match) {
         summary.noMatch++;
@@ -142,7 +177,7 @@ async function main() {
             .eq("id", s.id);
         }
         console.log(`  · 매칭없음 [${s.name}] (후보 ${candidates.length})`);
-        await sleep(sleepMs);
+        await sleep(jitter(sleepMs));
         continue;
       }
 
@@ -161,7 +196,7 @@ async function main() {
             .eq("id", s.id);
         }
         console.log(`  · 업종불일치 [${s.name}] → "${c.name}" [${c.category}] 매칭 파기`);
-        await sleep(sleepMs);
+        await sleep(jitter(sleepMs));
         continue;
       }
 
@@ -176,7 +211,7 @@ async function main() {
           detailHours = det.data.hoursText;
           detailPhone = det.data.phone ?? det.data.virtualPhone;
         }
-        await sleep(sleepMs);
+        await sleep(jitter(sleepMs));
       }
 
       // 채울 값 — "비어있을 때만". (에디터/공공데이터 보존)
@@ -233,7 +268,7 @@ async function main() {
       summary.failed++;
       console.warn(`  실패 [${s.name}]: ${String(e)}`);
     }
-    await sleep(sleepMs);
+    await sleep(jitter(sleepMs));
   }
 
   console.log(`\n=== 네이버 기본정보 ${dry ? "탐색(dry)" : "백필"} 완료 ===`);
