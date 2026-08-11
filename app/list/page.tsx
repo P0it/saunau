@@ -158,7 +158,12 @@ function ListInner() {
   const PAGE = 20;
   const [visible, setVisible] = useState(PAGE);
   // 필터·정렬·검색으로 목록이 바뀌면 처음부터 다시.
-  useEffect(() => setVisible(PAGE), [list]);
+  // 이펙트가 아니라 렌더 중 조정 — 이펙트로 되돌리면 이전 목록을 한 프레임 그렸다가 잘린다.
+  const [pagedList, setPagedList] = useState(list);
+  if (pagedList !== list) {
+    setPagedList(list);
+    setVisible(PAGE);
+  }
   const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = sentinelRef.current;

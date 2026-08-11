@@ -266,31 +266,31 @@ function RecordPicker({
 }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Sauna[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [resultTerm, setResultTerm] = useState(""); // results 가 어떤 검색어의 결과인지
   const [picked, setPicked] = useState<Sauna | null>(null);
   const [draft, setDraft] = useState("");
   const { records } = useRecords();
 
   // 검색 디바운스(외부 의존 없이 setTimeout). 최신 입력만 반영.
+  // 빈 검색어·진행 중 상태는 이펙트에서 되돌리지 않고 렌더에서 파생시킨다
+  // (이펙트 본문의 즉시 setState 는 렌더를 한 번 더 돌린다).
   useEffect(() => {
     const term = q.trim();
-    if (!term) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
+    if (!term) return;
     let alive = true;
     const t = setTimeout(() => {
       searchSaunas(term, 20)
         .then((rows) => {
-          if (alive) setResults(rows);
+          if (alive) {
+            setResults(rows);
+            setResultTerm(term);
+          }
         })
         .catch(() => {
-          if (alive) setResults([]);
-        })
-        .finally(() => {
-          if (alive) setLoading(false);
+          if (alive) {
+            setResults([]);
+            setResultTerm(term);
+          }
         });
     }, 250);
     return () => {
@@ -298,6 +298,10 @@ function RecordPicker({
       clearTimeout(t);
     };
   }, [q]);
+
+  const term = q.trim();
+  const searching = Boolean(term) && term !== resultTerm; // 결과가 현재 검색어보다 뒤쳐진 동안
+  const shown = searching ? [] : results;
 
   return (
     <div
@@ -363,20 +367,20 @@ function RecordPicker({
               </div>
             </div>
             <div className="mt-[10px] min-h-[160px] flex-1 overflow-y-auto px-[12px] pb-[20px]">
-              {loading ? (
+              {searching ? (
                 <p className="py-[40px] text-center text-[13px] text-muted">
                   검색 중…
                 </p>
-              ) : q.trim() && results.length === 0 ? (
-                <p className="py-[40px] text-center text-[13px] text-muted">
-                  검색 결과가 없어요
-                </p>
-              ) : !q.trim() ? (
+              ) : !term ? (
                 <p className="py-[40px] text-center text-[13px] text-muted">
                   사우나 이름이나 지역을 검색하세요
                 </p>
+              ) : shown.length === 0 ? (
+                <p className="py-[40px] text-center text-[13px] text-muted">
+                  검색 결과가 없어요
+                </p>
               ) : (
-                results.map((s) => {
+                shown.map((s) => {
                   const has = records.some((r) => r.saunaId === s.id);
                   return (
                     <button

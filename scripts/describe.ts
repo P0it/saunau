@@ -17,7 +17,19 @@ import { config } from "dotenv";
 import { getAdminClient } from "../lib/supabase/admin";
 import { buildPrompt } from "../lib/ingest/describe/prompt";
 import { generateDescription } from "../lib/ingest/describe/generate";
-import type { DescribeReview } from "../lib/ingest/describe/types";
+import type {
+  DescribeReview,
+  DescribeSaunaFacts,
+} from "../lib/ingest/describe/types";
+
+// 후보 매장 = 프롬프트에 넣는 사실(DescribeSaunaFacts) + 적재 판단에 쓰는 컬럼 몇 개.
+// 아래 select 목록과 1:1로 맞춰둔다.
+type Candidate = DescribeSaunaFacts & {
+  id: string;
+  has_parking: boolean | null;
+  water_note: string | null;
+  ai_description_at: string | null;
+};
 
 config({ path: ".env.local" });
 config();
@@ -54,7 +66,7 @@ async function main() {
   const summary = { targeted: 0, withDesc: 0, emptyDesc: 0, skipped: 0, failed: 0 };
 
   // 후보 사우나를 청크로 조회(블로그 보유 + 영업/검수통과 + (force아니면) 소개 없음)
-  let candidates: any[] = [];
+  let candidates: Candidate[] = [];
   for (let i = 0; i < withReviews.length && candidates.length < limit; i += 200) {
     const ids = withReviews.slice(i, i + 200);
     let q = supabase
@@ -69,7 +81,7 @@ async function main() {
     if (!force) q = q.is("ai_description_at", null);
     const { data, error } = await q;
     if (error) throw new Error(`대상 조회 실패: ${error.message}`);
-    candidates.push(...(data ?? []));
+    candidates.push(...((data ?? []) as Candidate[]));
   }
   candidates = candidates.slice(0, limit);
   summary.targeted = candidates.length;

@@ -135,7 +135,11 @@ export function useMyReviews() {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    // 최초 1회 로드는 비동기 안에서 — 이펙트 본문에서 곧장 상태를 건드리지 않는다
+    // (lib/auth.ts·lib/records.ts 와 같은 형태).
+    void (async () => {
+      await refresh();
+    })();
     const supabase = createSupabaseBrowserClient();
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
       void refresh();
