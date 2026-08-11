@@ -49,7 +49,11 @@ const TOP_CHIPS: {
   // 필터 시트의 '장소 유형'에는 그대로 남아있다(FilterSheet VENUE_CHIPS).
 ];
 import { MapSidePanel, MapDetailPanel } from "@/components/map/MapSidePanel";
-import { BottomSheet } from "@/components/map/BottomSheet";
+import {
+  BottomSheet,
+  SHEET_HANDLE_PX,
+  type BottomSheetHandle,
+} from "@/components/map/BottomSheet";
 import {
   FilterSheet,
   DEFAULT_FILTERS,
@@ -89,7 +93,7 @@ function loadNaverMaps(): Promise<void> {
 // (핀마다 다른 분류 아이콘은 범례 없이는 해독 불가 → 혼동만 줬음. 분류는 상단 필터칩이 담당.)
 // 글리프는 HomeTabIcon(components/layout/TabIcons.tsx)과 동일 — 시각적 단일 출처(SOT).
 // React 컴포넌트는 마커 content에 못 쓰므로 같은 path 를 인라인 SVG 문자열로 둔다.
-// stroke=currentColor 라 pinHtml 의 tint(선택=빨강/기본=#2A2724)를 그대로 상속.
+// stroke=currentColor 라 pinHtml 의 tint(선택·호버=흰색/기본=#2A2724)를 그대로 상속.
 // 15px 에서 가늘어 보이지 않게 stroke-width 만 2.4(HomeTabIcon 은 viewBox24 에서 2.6).
 const MARK_OPEN =
   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">';
@@ -109,24 +113,22 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+// 네이버지도식 핀: 말풍선 없이 작은 원형 사우나 아이콘 + 그 아래 상호 텍스트.
+// 라벨은 지도 타일 위에 바로 얹히므로 흰 후광(text-shadow)으로 읽히게 한다.
 function pinHtml(s: Sauna, selected: boolean, hovered = false): string {
-  // 선택 핀: 빨강 테두리(글로우 없음) / 호버 핀: 살짝 띄우는 그림자(빨강 오라 없음).
-  const border = selected ? "1.5px solid #F5402C" : "1px solid #fff";
-  const shadow = selected
-    ? "0 4px 14px rgba(0,0,0,.24)"
-    : hovered
-      ? "0 6px 16px rgba(0,0,0,.22)"
-      : "0 3px 10px rgba(0,0,0,.18)";
-  const z = selected || hovered ? "z-index:3;" : "";
-  const tint = selected || hovered ? "#F5402C" : "#2A2724"; // 아이콘 stroke=currentColor 가 상속
-  // 통일 마크(♨) + 상호. 긴 상호는 말줄임 — 핀이 화면을 가로지르지 않게.
-  const icon = `<span style="display:flex;flex:none;color:${tint}">${SAUNA_MARK}</span>`;
-  const name = `<span style="color:${tint};max-width:150px;overflow:hidden;text-overflow:ellipsis">${escapeHtml(s.name)}</span>`;
-  // 바깥 박스 하단-중앙이 좌표에 앵커되므로, 맨 아래 삼각 꼬리의 꼭짓점이 정확히 그 지점을 찍는다.
-  const pill = `<div style="background:#fff;border:${border};border-radius:999px;box-shadow:${shadow};padding:5px 11px;display:flex;align-items:center;gap:6px;white-space:nowrap;">${icon}${name}</div>`;
-  // 꼬리는 선택 여부와 무관하게 항상 흰색(pill 몸통과 동일) — 빨강 채움 방지.
-  const pointer = `<div style="width:0;height:0;margin-top:-2px;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #fff;filter:drop-shadow(0 2px 1.5px rgba(0,0,0,.22))"></div>`;
-  return `<div style="${z}transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;font:700 13px Pretendard;cursor:pointer;">${pill}${pointer}</div>`;
+  const on = selected || hovered;
+  // 아이콘 토큰: 기본=흰 원 + 먹색 마크 / 선택·호버=빨강 원 + 흰 마크(살짝 확대).
+  const dotBg = on ? "#F5402C" : "#fff";
+  const tint = on ? "#fff" : "#2A2724"; // 마크 stroke=currentColor 가 상속
+  const dotBorder = on ? "1.5px solid #fff" : "1px solid rgba(34,32,30,.10)";
+  const shadow = on ? "0 4px 12px rgba(245,64,44,.34)" : "0 2px 6px rgba(0,0,0,.20)";
+  const scale = on ? "scale(1.12)" : "scale(1)";
+  const z = on ? "z-index:3;" : "";
+  const dot = `<div style="width:28px;height:28px;border-radius:999px;background:${dotBg};border:${dotBorder};box-shadow:${shadow};display:flex;align-items:center;justify-content:center;color:${tint};transform:${scale};transform-origin:50% 100%;">${SAUNA_MARK}</div>`;
+  // 라벨은 absolute — 아이콘 하단이 좌표에 정확히 앉도록 레이아웃에서 빼둔다.
+  const labelColor = on ? "#F5402C" : "#22201E";
+  const label = `<div style="position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:3px;max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 12px Pretendard;line-height:1.25;color:${labelColor};text-shadow:0 0 3px #fff,0 0 3px #fff,0 1px 2px rgba(255,255,255,.9);">${escapeHtml(s.name)}</div>`;
+  return `<div style="${z}position:relative;transform:translate(-50%,-100%);cursor:pointer;">${dot}${label}</div>`;
 }
 
 // 줌아웃 시 개별 핀 대신 지역 집계 버블. 클수록 살짝 크게(밀도 직관).
@@ -216,7 +218,6 @@ export function NaverMapView({
     );
   }, [located, sheet, query]);
   const withLocRef = useRef<Located[]>(withLoc); // 마커 생성 클로저가 최신 목록을 읽도록
-  withLocRef.current = withLoc;
   const mapEl = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<Record<string, any>>({}); // 개별 핀(선택 스타일 갱신용)
@@ -243,7 +244,8 @@ export function NaverMapView({
   const [isDesktop, setIsDesktop] = useState(false); // lg+ = 좌측 패널, 그 미만 = 바텀시트
   // 모바일 바텀시트가 지도를 가리는 높이(px) — 지도 중심 보정·플로팅 버튼 위치의 기준.
   const [listCover, setListCover] = useState(0);
-  const [detailCover, setDetailCover] = useState(0);
+  // 모바일 시트 조작 핸들(목록→상세로 넘어갈 때 시트를 올려 상세가 바로 읽히게).
+  const sheetRef = useRef<BottomSheetHandle | null>(null);
   const meMarkerRef = useRef<any>(null); // 내 위치 파란 점
   // 현재 결과를 가져온 검색 중심(여기서 멀어지면 "이 지역 재검색"을 띄운다).
   const searchCenterRef = useRef<GeoPoint | null>(initialCenter ?? null);
@@ -253,14 +255,14 @@ export function NaverMapView({
   useEffect(() => {
     selectedRef.current = selected;
   }, [selected]);
+  // ref 쓰기는 커밋 후에만 — 아래 마커 재렌더 이펙트보다 먼저 선언돼 있어야 최신 목록이 보인다.
+  useEffect(() => {
+    withLocRef.current = withLoc;
+  }, [withLoc]);
 
   // 오버레이가 차지하는 영역 — 데스크톱은 좌측 패널 폭(x), 모바일은 바텀시트 높이(y).
-  // 상세 시트는 목록 시트 위에 뜨므로 둘 중 더 많이 가리는 쪽이 실제 가림 높이다.
-  const coverPx = isDesktop
-    ? 0
-    : panelId
-      ? Math.max(listCover, detailCover)
-      : listCover;
+  // 모바일 시트는 목록·상세가 한 장을 공유하므로(겹쳐 띄우지 않음) 가림 높이도 하나다.
+  const coverPx = isDesktop ? 0 : listCover;
   const occupiedX = isDesktop ? (collapsed ? 0 : 400) + (panelId ? 400 : 0) : 0;
 
   // 지도 이동의 단일 창구 — 오버레이(좌측 패널·바텀시트)를 뺀 '보이는 지도 영역'의
@@ -396,11 +398,14 @@ export function NaverMapView({
     }
   }
 
-  // 사우나 클릭 → 상세 패널 열기(선택 동기화).
+  // 사우나 클릭 → 상세 열기(선택 동기화).
+  // 데스크톱: 목록 옆에 상세 패널. 모바일: 같은 바텀시트가 목록 → 상세로 넘어간다(겹쳐 띄우지 않음).
   // 리스트 접힘 상태는 건드리지 않는다 — 접어둔 채 클릭하면 상세만 단독으로 뜬다.
   function openPanel(id: string) {
     setSelected(id);
     setPanelId(id);
+    // 목록 위치(0.62)에 그대로 두면 상세가 손바닥만큼만 보인다 — 시트를 올려준다.
+    sheetRef.current?.raiseTo(0.36);
   }
 
   // 우측 기능 레일 — 줌.
@@ -460,14 +465,21 @@ export function NaverMapView({
       : null;
   const filterActive = sheet !== DEFAULT_FILTERS;
 
+  // 패널 대상이 바뀌면 이전 매장의 사진·후기를 즉시 비운다.
+  // 이펙트가 아니라 렌더 중 조정 — 이펙트로 비우면 새 매장 화면에 이전 매장 사진이 한 프레임 남는다.
+  const [fetchedPanelId, setFetchedPanelId] = useState<string | null>(null);
+  if (panelId !== fetchedPanelId) {
+    setFetchedPanelId(panelId);
+    setPanelPhotos([]);
+    setPanelReviews([]);
+    setPanelVisitorReviews([]);
+    setPanelLoading(Boolean(panelId));
+  }
+
   // 패널 대상이 바뀌면 사진+후기를 가져온다(정책 OFF/미수집이면 빈 배열 → 폴백 표시).
   useEffect(() => {
     if (!panelId) return;
     let cancelled = false;
-    setPanelLoading(true);
-    setPanelPhotos([]);
-    setPanelReviews([]);
-    setPanelVisitorReviews([]);
     fetch(`/api/sauna-detail?id=${encodeURIComponent(panelId)}`)
       .then((r) => r.json())
       .then((j) => {
@@ -659,23 +671,23 @@ export function NaverMapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, initialCenter?.lat, initialCenter?.lng, coverPx]);
 
-  // 상세 시트를 열면 그 시트에 가려지지 않는 영역의 중앙으로 해당 핀을 다시 잡아준다.
-  // 시트 높이가 잡힌 뒤(detailCover>0) 한 번만 — 이미 선택돼 있던 핀을 눌러도 동작한다.
+  // 상세로 넘어가면 시트에 가려지지 않는 영역의 중앙으로 해당 핀을 다시 잡아준다.
+  // 시트가 올라가 가림 높이가 갱신된 뒤 한 번만 — 이미 선택돼 있던 핀을 눌러도 동작한다.
   const detailCenteredRef = useRef<string | null>(null);
   useEffect(() => {
     if (!panelId) {
       detailCenteredRef.current = null;
       return;
     }
-    if (isDesktop || !detailCover || detailCenteredRef.current === panelId) return;
+    if (isDesktop || !coverPx || detailCenteredRef.current === panelId) return;
     const s = withLocRef.current.find((x) => x.id === panelId);
     if (!s) return;
     detailCenteredRef.current = panelId;
     centerOn(s.location);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panelId, detailCover, isDesktop]);
+  }, [panelId, coverPx, isDesktop]);
 
-  // 재검색·필터로 노출 목록이 바뀌면 마커를 다시 그린다(withLocRef 는 렌더 시 이미 최신).
+  // 재검색·필터로 노출 목록이 바뀌면 마커를 다시 그린다(withLocRef 동기화 이펙트가 먼저 돈다).
   useEffect(() => {
     if (status === "ready") renderMarkers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -742,7 +754,6 @@ export function NaverMapView({
     prevHoveredRef.current = hovered;
     if (prev && prev !== hovered) styleMarker(prev);
     styleMarker(hovered);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hovered]);
 
   const showFallback = status === "nokey" || status === "error" || status === "authfail";
@@ -1021,14 +1032,16 @@ export function NaverMapView({
 
       {/* ── 모바일(lg 미만): 네이버지도식 바텀시트 ── */}
       {!showFallback && !isDesktop && (
-        <>
-          {/* 목록 바텀시트 — 핸들 드래그로 자유 신축. 진입 시엔 지도를 넉넉히 남긴다. */}
-          <BottomSheet
-            zClassName="z-[8]"
-            peekPx={170}
-            restRatio={0.62}
-            onCoverChange={setListCover}
-          >
+        /* 시트는 한 장 — 목록에서 하나를 고르면 그 자리에서 상세로 넘어간다(겹쳐 띄우지 않음).
+           목록은 언마운트하지 않고 감춰만 둬, 뒤로 돌아왔을 때 스크롤·입력이 그대로 남는다. */
+        <BottomSheet
+          zClassName="z-[8]"
+          peekPx={SHEET_HANDLE_PX}
+          restRatio={0.62}
+          handleRef={sheetRef}
+          onCoverChange={setListCover}
+        >
+          <div className={panelSauna ? "hidden" : "h-full"}>
             <MapSidePanel
               saunas={withLoc}
               loading={listLoading}
@@ -1045,18 +1058,9 @@ export function NaverMapView({
               query={query}
               onQueryChange={setQuery}
             />
-          </BottomSheet>
-
-          {/* 상세 바텀시트 — 핀 선택 시 목록 위로 올라옴. 아래로 끌면 닫힘 */}
+          </div>
           {panelSauna && (
-            <BottomSheet
-              key={panelId}
-              zClassName="z-[9]"
-              withClose
-              restRatio={0.56}
-              onCoverChange={setDetailCover}
-              onClose={() => setPanelId(null)}
-            >
+            <div key={panelId} className="h-full">
               <MapDetailPanel
                 sauna={panelSauna}
                 photos={panelPhotos}
@@ -1064,10 +1068,11 @@ export function NaverMapView({
                 visitorReviews={panelVisitorReviews}
                 loading={panelLoading}
                 onClose={() => setPanelId(null)}
+                asBack
               />
-            </BottomSheet>
+            </div>
           )}
-        </>
+        </BottomSheet>
       )}
 
       {/* 필터 시트 — 적용 시 노출 목록이 줄어드니 선택을 첫 결과로 옮긴다(없으면 해제) */}

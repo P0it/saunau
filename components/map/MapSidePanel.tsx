@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   X,
   Search,
@@ -97,6 +97,7 @@ export function MapDetailPanel({
   visitorReviews,
   loading,
   onClose,
+  asBack = false,
 }: {
   sauna: Sauna;
   photos: SaunaPhoto[];
@@ -104,6 +105,8 @@ export function MapDetailPanel({
   visitorReviews: SaunaReview[];
   loading: boolean;
   onClose: () => void;
+  /** 모바일 바텀시트처럼 '목록 → 상세'로 넘어온 경우 — 닫기 대신 뒤로(목록) 버튼으로 표시. */
+  asBack?: boolean;
 }) {
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-card">
@@ -114,6 +117,7 @@ export function MapDetailPanel({
         visitorReviews={visitorReviews}
         loading={loading}
         onClose={onClose}
+        asBack={asBack}
       />
     </div>
   );
@@ -145,6 +149,13 @@ function ListView({
   query: string;
   onQueryChange: (v: string) => void;
 }) {
+  // "이 지역 재검색"·필터·검색으로 목록이 통째로 바뀌면 맨 위부터 다시 읽혀야 한다 —
+  // 스크롤이 남아있으면 새 결과 중간이 보여 "안 바뀐 것"처럼 읽힌다.
+  const listRef = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: 0 });
+  }, [saunas]);
+
   return (
     <div className="flex h-full flex-col">
       <header className="flex-none border-b border-[#EEECE8]">
@@ -239,7 +250,7 @@ function ListView({
           )}
         </div>
       ) : (
-        <ul className="no-scrollbar flex-1 overflow-y-auto">
+        <ul ref={listRef} className="no-scrollbar flex-1 overflow-y-auto">
           {saunas.map((s) => {
             const active = s.id === selectedId;
             return (
@@ -323,6 +334,7 @@ function DetailView({
   visitorReviews,
   loading,
   onClose,
+  asBack = false,
 }: {
   sauna: Sauna;
   photos: SaunaPhoto[];
@@ -330,6 +342,7 @@ function DetailView({
   visitorReviews: SaunaReview[];
   loading: boolean;
   onClose: () => void;
+  asBack?: boolean;
 }) {
   const cat = CATEGORY_LABEL[primaryCategory(sauna)];
   const galleryRef = useRef<HTMLDivElement>(null);
@@ -396,10 +409,10 @@ function DetailView({
         <button
           type="button"
           onClick={onClose}
-          aria-label="상세 닫기"
+          aria-label={asBack ? "목록으로" : "상세 닫기"}
           className="pointer-events-auto flex h-[34px] w-[34px] cursor-pointer items-center justify-center rounded-full bg-white/90 text-ink shadow-[0_1px_6px_rgba(0,0,0,0.18)] backdrop-blur hover:bg-white"
         >
-          <X size={18} />
+          {asBack ? <ChevronLeft size={19} /> : <X size={18} />}
         </button>
       </div>
 
