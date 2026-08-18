@@ -87,12 +87,21 @@ async function main() {
     )
     .eq("status", "영업/정상")
     .eq("needs_review", false)
-    .order("open_date", { ascending: false, nullsFirst: false })
     .limit(limit);
   if (retryUnmatched) {
-    q = q.not("naver_synced_at", "is", null).is("naver_place_id", null);
-  } else if (!force) {
-    q = q.is("naver_synced_at", null);
+    // 재시도 모드엔 **진행 커서가 필요하다**. 실패해도 행이 조건에 그대로 남기 때문에,
+    // open_date 순으로 뽑으면 실행할 때마다 같은 상위 N곳을 다시 긁는다(실측: 배치2가
+    // 배치1의 실패분을 그대로 재조회해 회수율이 10%→1%로 보였다). 세 경로(매칭없음·
+    // 업종불일치·성공) 모두 naver_synced_at 을 now() 로 갱신하므로, **가장 오래 전에
+    // 시도한 순**으로 뽑으면 새 컬럼 없이 풀 전체를 한 바퀴 돈다.
+    q = q
+      .not("naver_synced_at", "is", null)
+      .is("naver_place_id", null)
+      .order("naver_synced_at", { ascending: true });
+  } else {
+    // 기본·--force: 최근 개업 순. (--force 는 이미 수집한 것도 다시 본다.)
+    if (!force) q = q.is("naver_synced_at", null);
+    q = q.order("open_date", { ascending: false, nullsFirst: false });
   }
   if (region) q = q.like("sido", `${region}%`);
 
