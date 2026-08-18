@@ -25,7 +25,8 @@
     "backfill:thumbs": "tsx scripts/backfill-blog-thumbs.ts",
     "prune:reviews": "tsx scripts/prune-blog-reviews.ts",
     "crawl:naver-photos": "tsx scripts/crawl-naver-photos.ts",
-    "prune:google-photos": "tsx scripts/prune-google-photos.ts"
+    "prune:google-photos": "tsx scripts/prune-google-photos.ts",
+    "merge:dupes": "tsx scripts/merge-duplicate-saunas.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
