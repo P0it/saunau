@@ -96,6 +96,7 @@ export function MapDetailPanel({
   reviews,
   visitorReviews,
   loading,
+  photosLoading = loading,
   onClose,
   asBack = false,
 }: {
@@ -104,18 +105,24 @@ export function MapDetailPanel({
   reviews: BlogReview[];
   visitorReviews: SaunaReview[];
   loading: boolean;
+  /** 사진만의 로딩(후기와 별도 요청) — 갤러리 스켈레톤은 이 값으로 건다. */
+  photosLoading?: boolean;
   onClose: () => void;
   /** 모바일 바텀시트처럼 '목록 → 상세'로 넘어온 경우 — 닫기 대신 뒤로(목록) 버튼으로 표시. */
   asBack?: boolean;
 }) {
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-card">
+      {/* key — 다른 매장을 열면 새로 마운트한다. 없으면 캐러셀 인덱스·가로 스크롤
+          위치·제목 고정 상태가 이전 매장 것 그대로 남는다(예: 새 매장인데 "3 / 5"). */}
       <DetailView
+        key={sauna.id}
         sauna={sauna}
         photos={photos}
         reviews={reviews}
         visitorReviews={visitorReviews}
         loading={loading}
+        photosLoading={photosLoading}
         onClose={onClose}
         asBack={asBack}
       />
@@ -333,6 +340,7 @@ function DetailView({
   reviews,
   visitorReviews,
   loading,
+  photosLoading = loading,
   onClose,
   asBack = false,
 }: {
@@ -341,6 +349,7 @@ function DetailView({
   reviews: BlogReview[];
   visitorReviews: SaunaReview[];
   loading: boolean;
+  photosLoading?: boolean;
   onClose: () => void;
   asBack?: boolean;
 }) {
@@ -423,7 +432,7 @@ function DetailView({
       >
       {/* 사진 갤러리 */}
       <div className="relative flex-none">
-        {loading ? (
+        {photosLoading ? (
           <div className="h-[220px] w-full animate-pulse bg-[#EEF0F2]" />
         ) : photos.length > 0 ? (
           <div
@@ -431,12 +440,19 @@ function DetailView({
             onScroll={onGalleryScroll}
             className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto"
           >
-            {photos.map((p) => (
+            {photos.map((p, i) => (
+              // 회색 판을 칸에 깔아둔다 — 응답은 왔는데 이미지 바이트가 아직인 구간에
+              // 흰 여백이 보이던 것을 막는다(이미지가 그 위에 얹힌다).
               <div
                 key={p.id}
-                className="relative h-[220px] w-full flex-none snap-center"
+                className="relative h-[220px] w-full flex-none snap-center bg-[#EEF0F2]"
               >
-                <SaunaImage src={p.url} alt={sauna.name} sizes="400px" />
+                <SaunaImage
+                  src={p.url}
+                  alt={sauna.name}
+                  sizes="400px"
+                  priority={i === 0}
+                />
               </div>
             ))}
           </div>

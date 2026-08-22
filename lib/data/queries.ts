@@ -274,8 +274,16 @@ export async function getSaunaPhotos(saunaId: string): Promise<SaunaPhoto[]> {
     .is("review_id", null) // 후기 첨부 사진은 갤러리에서 제외(후기 카드 전용)
     .order("sort_order", { ascending: true });
   if (error) throw error;
+  // 같은 사진이 여러 행으로 들어온 매장이 있어(크롤 재수집분) url 로 중복을 제거한다.
+  // sort_order 오름차순이므로 먼저 나온 행(=대표 순서가 앞선 쪽)을 남긴다.
+  const seen = new Set<string>();
   return (data ?? [])
     .filter((r: any) => images.allowedSources.includes(r.source))
+    .filter((r: any) => {
+      if (seen.has(r.url)) return false;
+      seen.add(r.url);
+      return true;
+    })
     .map((r: any) => ({
       id: r.id,
       url: r.url, // 항상 우리 Storage URL

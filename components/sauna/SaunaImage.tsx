@@ -18,6 +18,7 @@ export function SaunaImage({
   className = "object-cover",
   grayscale = false,
   iconSize = 34,
+  priority = false,
 }: {
   src: string | null;
   alt: string;
@@ -25,6 +26,8 @@ export function SaunaImage({
   className?: string;
   grayscale?: boolean;
   iconSize?: number;
+  /** 화면에 바로 보이는 히어로 첫 장 — 지연 로드 대신 즉시 받는다. */
+  priority?: boolean;
 }) {
   if (!src) {
     return (
@@ -39,6 +42,7 @@ export function SaunaImage({
       alt={alt}
       fill
       sizes={sizes}
+      priority={priority}
       className={`${className} ${grayscale ? "grayscale" : ""}`}
     />
   );

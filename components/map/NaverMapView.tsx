@@ -265,6 +265,8 @@ export function NaverMapView({
   const [panelReviews, setPanelReviews] = useState<BlogReview[]>([]);
   const [panelVisitorReviews, setPanelVisitorReviews] = useState<SaunaReview[]>([]);
   const [panelLoading, setPanelLoading] = useState(false);
+  // 사진은 후기와 별도 요청 — 갤러리가 후기 쿼리를 기다리지 않게 로딩도 따로 본다.
+  const [panelPhotosLoading, setPanelPhotosLoading] = useState(false);
   const [collapsed, setCollapsed] = useState(false); // 좌측 패널 접힘(지도 전체 보기)
   // 좌표 진입 초기 목록 로딩 — 마운트 시 /api/nearby 가 채워질 때까지 패널에 스켈레톤 표시.
   const [listLoading, setListLoading] = useState(
@@ -503,17 +505,31 @@ export function NaverMapView({
     setPanelReviews([]);
     setPanelVisitorReviews([]);
     setPanelLoading(Boolean(panelId));
+    setPanelPhotosLoading(Boolean(panelId));
   }
 
-  // 패널 대상이 바뀌면 사진+후기를 가져온다(정책 OFF/미수집이면 빈 배열 → 폴백 표시).
+  // 패널 대상이 바뀌면 사진과 후기를 **병렬 두 요청**으로 가져온다.
+  // 화면 맨 위의 갤러리가 후기 쿼리(방문자 후기+첨부사진+프로필)를 기다리지 않도록 분리한 것.
+  // 정책 OFF/미수집이면 빈 배열 → 폴백 표시.
   useEffect(() => {
     if (!panelId) return;
     let cancelled = false;
-    fetch(`/api/sauna-detail?id=${encodeURIComponent(panelId)}`)
+
+    fetch(`/api/sauna-photos?id=${encodeURIComponent(panelId)}`)
       .then((r) => r.json())
       .then((j) => {
         if (cancelled) return;
         if (Array.isArray(j.photos)) setPanelPhotos(j.photos as SaunaPhoto[]);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setPanelPhotosLoading(false);
+      });
+
+    fetch(`/api/sauna-detail?id=${encodeURIComponent(panelId)}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled) return;
         if (Array.isArray(j.reviews)) setPanelReviews(j.reviews as BlogReview[]);
         if (Array.isArray(j.visitorReviews))
           setPanelVisitorReviews(j.visitorReviews as SaunaReview[]);
@@ -522,6 +538,7 @@ export function NaverMapView({
       .finally(() => {
         if (!cancelled) setPanelLoading(false);
       });
+
     return () => {
       cancelled = true;
     };
@@ -1074,6 +1091,7 @@ export function NaverMapView({
                   reviews={panelReviews}
                   visitorReviews={panelVisitorReviews}
                   loading={panelLoading}
+                  photosLoading={panelPhotosLoading}
                   onClose={() => setPanelId(null)}
                 />
               </div>
@@ -1142,6 +1160,7 @@ export function NaverMapView({
                 reviews={panelReviews}
                 visitorReviews={panelVisitorReviews}
                 loading={panelLoading}
+                photosLoading={panelPhotosLoading}
                 onClose={() => setPanelId(null)}
                 asBack
               />
