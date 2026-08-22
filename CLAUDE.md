@@ -2,13 +2,28 @@
 
 ## 작업 완료 시 (커밋·푸시)
 
-기능이 **동작 확인까지 끝나면 지시를 기다리지 말고** 커밋·푸시까지 진행한다.
+**기능 단위 개발이 끝날 때마다** 지시를 기다리지 말고 커밋·푸시까지 진행한다.
+"어느 정도 됐다" 싶은 지점이 곧 커밋 지점 — 여러 기능을 모아뒀다가 한 번에 올리지 않는다.
+대화가 길어지는 작업이면 중간중간 끊어서 올린다.
 
 1. `npm run lint` — 통과해야 커밋. 실패하면 고치고 다시.
 2. `git add` 는 **이번 작업에 관련된 파일만** (`git add -A` 금지 — 크롤 산출물·로컬 설정 섞임).
 3. 커밋 — Conventional Commits + 한글 요약: `feat(map): 내 주변 진입 지연 제거`
    `feat` `fix` `perf` `refactor` / scope: `ui` `map` `ingest` `storage` `auth` `share` `admin` …
 4. `git push origin main` — 이 저장소는 **main 직접 푸시**(브랜치·PR 안 씀).
+5. **푸시로 끝내지 않는다 — 배포까지 확인한다.** main 푸시는 Vercel 프로덕션 배포로 이어진다.
+
+### 배포 확인
+
+`git push` 가 성공해도 Vercel 이 커밋을 못 집어가는 경우가 있다(푸시 경합으로 훅 유실 등).
+UI 를 건드린 작업이면 푸시 후 아래로 실제 반영을 확인한다.
+
+```
+gh api repos/P0it/saunau/deployments --jq '.[0:3][]|{sha:.sha[0:7],env:.environment,created:.created_at}'
+```
+
+최신 배포 sha 가 방금 푸시한 커밋이 아니면 배포가 안 걸린 것 — 다음 커밋을 얹어 다시 트리거한다.
+프로덕션은 `https://saunau.vercel.app` 이며, 응답이 `x-vercel-cache: HIT` 면 캐시된 이전 빌드일 수 있다.
 
 **멈추고 물어볼 것:** 실패하는 테스트/린트를 우회해야 할 때, DB 스키마·마이그레이션 변경,
 `scripts/` 크롤러가 외부에 실제 요청을 보내는 변경, 시크릿·환경변수 관련 파일.
