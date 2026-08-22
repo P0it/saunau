@@ -125,14 +125,11 @@ body {
     0 4px 18px rgba(0, 0, 0, 0.16);
 }
 
-/*
- * 앱 첫 로딩 스플래시 — 워드마크가 살짝 떠오르고, 위로 김(steam)이 피어오른다.
- * 일러스트의 김 모티프(brand vermilion 곡선)를 재사용해 사우나 분위기를 전달.
- */
-@keyframes splash-rise {
+/* 스플래시 로고 — 마크가 살짝 위에서 내려앉고, 워드마크가 뒤따라 뜬다. */
+@keyframes splash-mark {
   0% {
     opacity: 0;
-    transform: translateY(10px) scale(0.96);
+    transform: translateY(-10px) scale(0.94);
   }
   100% {
     opacity: 1;
@@ -140,57 +137,28 @@ body {
   }
 }
 
-@keyframes splash-steam {
+@keyframes splash-type {
   0% {
     opacity: 0;
-    transform: translateY(8px) scaleY(0.7);
-  }
-  35% {
-    opacity: 0.9;
+    transform: translateY(6px);
   }
   100% {
-    opacity: 0;
-    transform: translateY(-16px) scaleY(1.15);
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-/* 워드마크 열기 일렁임 — 살짝 떠오르며 흐려지고 따뜻한 글로우가 번진다. */
-@keyframes splash-heat {
-  0%,
-  100% {
-    transform: translateY(0) scaleY(1);
-    filter: blur(0) drop-shadow(0 0 0 rgba(255, 214, 170, 0));
-  }
-  50% {
-    transform: translateY(-1.5px) scaleY(1.022);
-    filter: blur(0.5px) drop-shadow(0 2px 12px rgba(255, 214, 170, 0.5));
-  }
+.splash-mark {
+  animation: splash-mark 0.62s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.splash-wordmark {
-  animation: splash-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.splash-heat {
-  animation: splash-heat 2.6s ease-in-out infinite;
-}
-
-.splash-steam path {
-  transform-box: fill-box;
-  transform-origin: bottom center;
-  animation: splash-steam 1.8s ease-in-out infinite;
-}
-.splash-steam path:nth-child(2) {
-  animation-delay: 0.3s;
-}
-.splash-steam path:nth-child(3) {
-  animation-delay: 0.6s;
+.splash-type {
+  animation: splash-type 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .splash-wordmark,
-  .splash-steam path,
-  .splash-heat {
+  .splash-mark,
+  .splash-type {
     animation: none;
   }
 }

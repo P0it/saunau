@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LogoMark } from "@/components/illustrations";
 import { Wordmark } from "./Wordmark";
 
 /**
- * 앱 첫 로딩 스플래시 — 워드마크가 떠오르고 위로 김(steam)이 피어오른다.
+ * 앱 첫 로딩 스플래시 — 흰 바탕에 로고 마크가 내려앉고 워드마크가 뒤따라 뜬다.
  * AppFrame 최초 마운트 시 1회만 표시(클라이언트 라우팅 전환에는 다시 안 뜸).
  * 표시 → 페이드아웃 → 언마운트.
  */
@@ -32,45 +33,19 @@ export function SplashScreen({ fullBleed = false }: { fullBleed?: boolean }) {
     <div
       aria-hidden
       className={
-        "fixed inset-y-0 left-1/2 z-[60] flex w-full -translate-x-1/2 flex-col items-center justify-center bg-brand transition-opacity duration-[450ms] ease-out" +
+        "fixed inset-y-0 left-1/2 z-[60] flex w-full -translate-x-1/2 flex-col items-center justify-center bg-card transition-opacity duration-[450ms] ease-out" +
         (fullBleed ? "" : " max-w-[430px]")
       }
       style={{ opacity: phase === "fade" ? 0 : 1 }}
     >
-      <div className="splash-wordmark flex flex-col items-center">
-        {/* 김(steam) — 일러스트와 동일한 vermilion 곡선 모티프 */}
-        <svg
-          className="splash-steam mb-[6px]"
-          width="58"
-          height="34"
-          viewBox="0 0 58 34"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M16 32c-4-4 4-7 0-13"
-            stroke="#ffffff"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-          <path
-            d="M29 32c-4-4 4-7 0-13"
-            stroke="#ffffff"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-          <path
-            d="M42 32c-4-4 4-7 0-13"
-            stroke="#ffffff"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-        </svg>
-
-        {/* heat 래퍼에서 일렁임(transform/blur/glow)을 주고, 안쪽 Wordmark는 기울임 transform 유지 */}
-        <div className="splash-heat">
-          <Wordmark className="text-[44px] text-white" />
-        </div>
+      <div className="flex flex-col items-center gap-[22px]">
+        {/* 마크가 살짝 위에서 내려앉는다 — 판이 바닥에 놓이는 동작 */}
+        <span className="splash-mark inline-flex">
+          <LogoMark size={92} />
+        </span>
+        <span className="splash-type">
+          <Wordmark className="text-[40px] text-brand" />
+        </span>
       </div>
     </div>
   );
