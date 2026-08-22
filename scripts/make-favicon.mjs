@@ -5,13 +5,13 @@
  * 16/32/48 PNG 로 줄인 뒤 ICO 컨테이너(PNG 내장 방식)로 묶는다.
  * 디자인을 바꿨으면 icon.tsx 를 고친 뒤 이 스크립트를 다시 돌린다.
  *
- *   npx next dev -p 3177        # 다른 터미널에서 먼저 띄운다
- *   node scripts/make-favicon.mjs [http://localhost:3177]
+ *   pnpm dev:3100               # 다른 터미널에서 먼저 띄운다(NCP 등록 포트)
+ *   node scripts/make-favicon.mjs [http://localhost:3100]
  */
 import sharp from "sharp";
 import { writeFile } from "node:fs/promises";
 
-const base = process.argv[2] ?? "http://localhost:3177";
+const base = process.argv[2] ?? "http://localhost:3100";
 
 const res = await fetch(`${base}/icon`);
 if (!res.ok) {
