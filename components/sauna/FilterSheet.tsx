@@ -30,6 +30,25 @@ export const DEFAULT_FILTERS: SheetFilters = {
   coldTemp: [5, 25],
 };
 
+/**
+ * 값 기준 "필터 없음" 판정. 참조 비교(`f !== DEFAULT_FILTERS`)를 쓰면, 칩 토글이
+ * `{ ...DEFAULT_FILTERS, types: [] }` 처럼 매번 새 객체를 만들기 때문에 실제로 필터가
+ * 비어 있어도 활성 표시가 영구히 켜진 채로 남는다.
+ */
+export function isDefaultFilters(f: SheetFilters): boolean {
+  return (
+    f.types.length === 0 &&
+    f.venues.length === 0 &&
+    f.kinds.length === 0 &&
+    f.sesin === DEFAULT_FILTERS.sesin &&
+    f.open === DEFAULT_FILTERS.open &&
+    f.saunaTemp[0] === DEFAULT_FILTERS.saunaTemp[0] &&
+    f.saunaTemp[1] === DEFAULT_FILTERS.saunaTemp[1] &&
+    f.coldTemp[0] === DEFAULT_FILTERS.coldTemp[0] &&
+    f.coldTemp[1] === DEFAULT_FILTERS.coldTemp[1]
+  );
+}
+
 const TYPE_CHIPS: { value: SaunaCategory; label: string }[] = [
   { value: "bathhouse", label: "목욕탕" },
   { value: "jjimjilbang", label: "찜질방" },

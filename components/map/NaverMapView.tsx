@@ -57,6 +57,7 @@ import {
 import {
   FilterSheet,
   DEFAULT_FILTERS,
+  isDefaultFilters,
   matchesFilters,
   type SheetFilters,
 } from "@/components/sauna/FilterSheet";
@@ -463,7 +464,7 @@ export function NaverMapView({
     sheet.types.length === 1
       ? sheet.types[0]
       : null;
-  const filterActive = sheet !== DEFAULT_FILTERS;
+  const filterActive = !isDefaultFilters(sheet);
 
   // 패널 대상이 바뀌면 이전 매장의 사진·후기를 즉시 비운다.
   // 이펙트가 아니라 렌더 중 조정 — 이펙트로 비우면 새 매장 화면에 이전 매장 사진이 한 프레임 남는다.

@@ -20,6 +20,7 @@ import { Segment } from "@/components/ui/Segment";
 import {
   FilterSheet,
   DEFAULT_FILTERS,
+  isDefaultFilters,
   matchesFilters,
   type SheetFilters,
 } from "@/components/sauna/FilterSheet";
@@ -240,7 +241,7 @@ function ListInner() {
         >
           <Funnel size={15} />
           필터
-          {sheet !== DEFAULT_FILTERS && (
+          {!isDefaultFilters(sheet) && (
             <span className="absolute -right-[2px] -top-[2px] h-[8px] w-[8px] rounded-full bg-brand" />
           )}
         </button>
