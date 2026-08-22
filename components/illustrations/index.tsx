@@ -168,3 +168,18 @@ export function HotSpringChip({ size = 18, className }: ChipIllustProps) {
     </svg>
   );
 }
+
+/**
+ * ♨ 김 마크 — 빨강 곡선 3가닥(가운데가 큼). 거의 모든 일러스트의 공통 모티프를
+ * 단독으로 쓸 수 있게 뽑은 것. 전용 그림이 없는 상태 화면(404·에러)의 아이콘 자리용.
+ * 단색이라 다색 칩과 달리 토큰 배경 없이도 읽힌다.
+ */
+export function SteamMark({ size = 18, className }: ChipIllustProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      <path d="M5.8 20.5c-3-3 3-5.8 0-8.8" stroke="#F5402C" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M12 21c-3.4-3.4 3.4-6.6 0-10" stroke="#F5402C" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M18.2 20.5c-3-3 3-5.8 0-8.8" stroke="#F5402C" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  );
+}

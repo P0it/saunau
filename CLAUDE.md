@@ -52,6 +52,14 @@
 | `CommunityChip` | 커뮤니티 | 초록 덤벨 |
 | `HotSpringChip` | 온천 | 파란 노천탕 + 빨강 김 |
 
+### 단독 모티프
+
+| 컴포넌트 | 용어 | 모티프 |
+|---------|------|--------|
+| `SteamMark` | ♨ 김 | 빨강 곡선 3가닥(가운데가 큼) — 단색이라 토큰 배경 없이도 읽힌다 |
+
+전용 그림이 없는 상태 화면(404·에러)의 아이콘 자리에 쓴다. `size` prop.
+
 ### 칩 렌더 주의
 
 칩 일러스트는 **다색**이라 `currentColor` 틴트가 안 된다. 활성(빨강 배경)/비활성(흰 배경)
@@ -62,3 +70,4 @@
 
 - `app/page.tsx` — 홈 카테고리/테마 카드 (대형)
 - `components/map/NaverMapView.tsx` — 지도 상단 빠른필터 칩 (`*Chip`)
+- `app/not-found.tsx`, `app/error.tsx` — 상태 화면 (`SteamMark`)
