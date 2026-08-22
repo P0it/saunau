@@ -45,17 +45,20 @@ type Row = Record<string, unknown> & { id: string };
 
 /** PostgREST 는 응답을 1,000행에서 자른다 → range 로 끝까지 훑는다. */
 async function pageAll<T>(
+  // PostgREST 빌더의 응답 타입은 select() 문자열에 따라 매번 달라진다(동적 cols 면
+  // GenericStringError). 여기서는 행 모양을 호출자가 <T> 로 단언하므로 data 는 unknown 으로 받는다.
   run: (
     from: number,
     to: number,
-  ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+  ) => PromiseLike<{ data: unknown; error: { message: string } | null }>,
 ): Promise<T[]> {
   const out: T[] = [];
   for (let from = 0; ; from += 1000) {
     const { data, error } = await run(from, from + 999);
     if (error) throw new Error(error.message);
-    out.push(...((data ?? []) as T[]));
-    if (!data || data.length < 1000) break;
+    const rows = (data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < 1000) break;
   }
   return out;
 }
