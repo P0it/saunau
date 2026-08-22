@@ -137,9 +137,16 @@ function clusterHtml(label: string, count: number): string {
   const big = count >= 100;
   const pad = big ? "9px 15px" : "7px 13px";
   const num = big ? 17 : 15;
-  return `<div style="transform:translate(-50%,-50%);background:#fff;border:1px solid #fff;border-radius:999px;box-shadow:0 3px 12px rgba(0,0,0,.20);padding:${pad};display:flex;flex-direction:column;align-items:center;line-height:1.1;font-family:Pretendard;white-space:nowrap;cursor:pointer;">
-    <span style="font-size:11px;font-weight:600;color:#7A766F">${label}</span>
-    <span style="font-weight:800;color:#F5402C;font-size:${num}px">${count}<span style="font-size:11px;font-weight:600;color:#A8A39C">곳</span></span>
+  // 0×0 래퍼 + 그 안에서 translate 로 중앙 정렬.
+  // 래퍼를 그대로 버블 크기로 두면(anchor 0,0) 네이버가 잡는 마커 박스는 좌표의 우하단에
+  // 놓이는데 그림은 transform 으로 좌상단에 그려져, 보이는 버블과 클릭 영역이 어긋난다.
+  // 그 결과 옆 버블의 투명한 박스가 클릭을 먹어 버블이 눌리지 않았다.
+  // 래퍼가 0×0 이면 좌표에 정확히 앉고, 클릭은 자식(보이는 버블)에서 버블링돼 그대로 잡힌다.
+  return `<div style="width:0;height:0;position:relative;">
+    <div style="position:absolute;left:0;top:0;transform:translate(-50%,-50%);background:#fff;border:1px solid #fff;border-radius:999px;box-shadow:0 3px 12px rgba(0,0,0,.20);padding:${pad};display:flex;flex-direction:column;align-items:center;line-height:1.1;font-family:Pretendard;white-space:nowrap;cursor:pointer;">
+      <span style="font-size:11px;font-weight:600;color:#7A766F">${label}</span>
+      <span style="font-weight:800;color:#F5402C;font-size:${num}px">${count}<span style="font-size:11px;font-weight:600;color:#A8A39C">곳</span></span>
+    </div>
   </div>`;
 }
 
@@ -155,6 +162,27 @@ const SIDO_SHORT: Record<string, string> = {
   강원특별자치도: "강원",
   제주특별자치도: "제주",
 };
+// 시·도 버블의 앉을 자리 — 소속 매장의 평균 좌표를 쓰면 경기도처럼 서울을 감싸는
+// 지역의 중심이 서울 한복판에 찍혀 두 버블이 완전히 포개진다. 도청·시청 소재지를 쓴다.
+const SIDO_CENTER: Record<string, GeoPoint> = {
+  서울특별시: { lat: 37.5665, lng: 126.978 },
+  경기도: { lat: 37.2911, lng: 127.0089 }, // 수원
+  인천광역시: { lat: 37.4563, lng: 126.7052 },
+  부산광역시: { lat: 35.1796, lng: 129.0756 },
+  대구광역시: { lat: 35.8714, lng: 128.6014 },
+  대전광역시: { lat: 36.3504, lng: 127.3845 },
+  울산광역시: { lat: 35.5384, lng: 129.3114 },
+  세종특별자치시: { lat: 36.48, lng: 127.289 },
+  강원특별자치도: { lat: 37.8813, lng: 127.73 }, // 춘천
+  충청북도: { lat: 36.6357, lng: 127.4914 }, // 청주
+  충청남도: { lat: 36.6588, lng: 126.6728 }, // 내포
+  전북특별자치도: { lat: 35.8203, lng: 127.1088 }, // 전주
+  경상북도: { lat: 36.576, lng: 128.5056 }, // 안동
+  경상남도: { lat: 35.2383, lng: 128.6924 }, // 창원
+  제주특별자치도: { lat: 33.4996, lng: 126.5312 },
+  전남광주통합특별시: { lat: 35.1595, lng: 126.8526 }, // 광주
+};
+
 function shortSido(sido: string): string {
   if (SIDO_SHORT[sido]) return SIDO_SHORT[sido];
   return sido.replace(/특별자치시$|광역시$|특별시$|자치도$|도$/u, "") || sido;
@@ -561,20 +589,28 @@ export function NaverMapView({
     });
 
     groups.forEach((members) => {
-      const lat = members.reduce((a, s) => a + s.location.lat, 0) / members.length;
-      const lng = members.reduce((a, s) => a + s.location.lng, 0) / members.length;
+      const avgLat = members.reduce((a, s) => a + s.location.lat, 0) / members.length;
+      const avgLng = members.reduce((a, s) => a + s.location.lng, 0) / members.length;
+      // 시·도는 대표 좌표(도청 소재지), 시·군·구는 소속 매장의 평균 좌표.
+      const seat = level === "sido" ? SIDO_CENTER[members[0].sido] : undefined;
+      const lat = seat?.lat ?? avgLat;
+      const lng = seat?.lng ?? avgLng;
       const label = level === "sido" ? shortSido(members[0].sido) : members[0].sigungu;
       const marker = new naver.maps.Marker({
         position: new naver.maps.LatLng(lat, lng),
         map,
+        // 수도권처럼 버블이 겹치는 곳에서 매장이 많은 지역이 뒤로 밀리지 않게.
+        zIndex: members.length,
         icon: {
           content: clusterHtml(label, members.length),
           anchor: new naver.maps.Point(0, 0),
         },
       });
       // 버블 클릭 → 한 단계 더 파고든다(시·도→시·군·구 줌, 시·군·구→개별 핀 줌).
+      // morph 대신 centerOn — 바텀시트·좌측 패널을 뺀 '보이는 영역' 중앙에 놓아야
+      // 파고든 결과가 시트 뒤로 숨지 않는다(지도 이동의 단일 창구).
       naver.maps.Event.addListener(marker, "click", () =>
-        map.morph(new naver.maps.LatLng(lat, lng), level === "sido" ? 10 : 13),
+        centerOn({ lat, lng }, { zoom: level === "sido" ? 10 : 13 }),
       );
       allMarkersRef.current.push(marker);
     });
@@ -594,11 +630,13 @@ export function NaverMapView({
       .then(() => {
         if (cancelled || mapRef.current || !mapEl.current) return;
         const naver = window.naver;
-        // 홈 "내 주변"에서 위치 동의 후 넘어왔으면 내 좌표에서, 아니면 첫 사우나/서울 기본값에서 연다.
-        const center = initialCenter ?? withLoc[0]?.location ?? { lat: 37.5006, lng: 127.0366 };
+        // 홈 "내 주변"에서 위치 동의 후 넘어왔으면 내 좌표에서, 아니면 전국 뷰로 연다.
+        // 좌표가 없을 때의 최종 프레임은 아래 fitBounds 효과가 잡지만, 그 전에 잠깐
+        // 보이는 첫 프레임도 전국이어야 화면이 튀지 않는다(한반도 중앙·줌 7).
+        const center = initialCenter ?? { lat: 36.5, lng: 127.8 };
         const map = new naver.maps.Map(mapEl.current, {
           center: new naver.maps.LatLng(center.lat, center.lng),
-          zoom: initialCenter ? 14 : 13,
+          zoom: initialCenter ? 14 : 7,
           scaleControl: false,
           mapDataControl: false,
           // NAVER 로고는 약관상 숨길 수 없어 좌측 패널을 피해 우하단에 둔다.
@@ -671,6 +709,42 @@ export function NaverMapView({
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, initialCenter?.lat, initialCenter?.lng, coverPx]);
+
+  // 위치 동의 없이 들어온 첫 화면 — 예전엔 withLoc[0](=가장 최근 오픈한 매장)에 줌 13 으로
+  // 붙어서, 시골 매장 한 곳만 덩그러니 뜬 프레임으로 열렸다. 대신 실린 매장이 모두 들어오도록
+  // 맞춰 전국 뷰로 연다(줌 9 미만 → 시·도 집계 버블이라 커버리지가 한눈에 보인다).
+  // 바텀시트·좌측 패널에 가리지 않도록 여백을 주고, 시트 높이가 잡히면 한 번 더 맞춘다.
+  const initFittedRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (initialCenter || status !== "ready") return;
+    const naver = window.naver;
+    const map = mapRef.current;
+    if (!naver || !map || withLoc.length === 0) return;
+    const prev = initFittedRef.current;
+    if (prev !== null && (prev > 0 || coverPx === 0)) return;
+    initFittedRef.current = coverPx;
+
+    const bounds = new naver.maps.LatLngBounds();
+    for (const s of withLoc) {
+      bounds.extend(new naver.maps.LatLng(s.location.lat, s.location.lng));
+    }
+    const pad = 24;
+    // 모바일은 시트 위에 플로팅 버튼("리스트로 보기"·내 위치)이 떠 있다(floatBottom 최대 70 + 버튼 높이).
+    // 그만큼 더 비워야 제주처럼 남쪽 끝 버블이 버튼 뒤로 숨지 않는다.
+    const bottomClear = coverPx + (isDesktop ? pad : 110);
+    try {
+      map.fitBounds(bounds, {
+        top: pad,
+        right: pad,
+        bottom: bottomClear,
+        left: occupiedX + pad,
+      });
+    } catch {
+      // margin 인자를 못 받는 SDK 버전이면 여백 없이라도 전체가 들어오게.
+      map.fitBounds(bounds);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, coverPx, occupiedX, isDesktop, withLoc.length]);
 
   // 상세로 넘어가면 시트에 가려지지 않는 영역의 중앙으로 해당 핀을 다시 잡아준다.
   // 시트가 올라가 가림 높이가 갱신된 뒤 한 번만 — 이미 선택돼 있던 핀을 눌러도 동작한다.
