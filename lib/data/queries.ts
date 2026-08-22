@@ -494,6 +494,52 @@ export async function getArticles(limit?: number): Promise<Article[]> {
   }));
 }
 
+/**
+ * 사이트맵용 매장 목록 — 최소 컬럼만(5천여 건이라 COLS 전체를 끌면 낭비).
+ * 노출 기준은 발견(discoverBase)과 동일: 영업중 + 검수 통과 + slug 존재.
+ * PostgREST 는 1,000행에서 자르므로 range 로 끝까지 훑는다.
+ */
+export async function getSitemapSaunas(): Promise<
+  { sido: string; slug: string; updated_at: string | null }[]
+> {
+  const out: { sido: string; slug: string; updated_at: string | null }[] = [];
+  const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabasePublic
+      .from("saunas")
+      .select("sido, slug, updated_at")
+      .eq("status", OPERATING)
+      .eq("needs_review", false)
+      .not("slug", "is", null)
+      .order("id")
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    const rows = (data ?? []) as any[];
+    for (const r of rows) {
+      if (!r.slug || !r.sido) continue;
+      out.push({ sido: r.sido, slug: r.slug, updated_at: r.updated_at ?? null });
+    }
+    if (rows.length < PAGE) break;
+  }
+  return out;
+}
+
+/** 사이트맵용 아티클 목록 — slug + 발행일만. */
+export async function getSitemapArticles(): Promise<
+  { slug: string; published_at: string | null }[]
+> {
+  const { data, error } = await supabasePublic
+    .from("articles")
+    .select("slug, published_at")
+    .eq("is_published", true)
+    .not("slug", "is", null)
+    .order("published_at", { ascending: false });
+  if (error) throw error;
+  return ((data ?? []) as any[])
+    .filter((a) => a.slug)
+    .map((a) => ({ slug: a.slug, published_at: a.published_at ?? null }));
+}
+
 export async function getArticleBySlug(slug: string): Promise<Article | null> {
   const { data, error } = await supabasePublic
     .from("articles")
