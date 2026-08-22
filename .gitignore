@@ -32,9 +32,14 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# 단, 키 이름만 적힌 템플릿은 커밋한다(실제 값 없음).
+!.env.example
 
 # vercel
 .vercel
+
+# playwright mcp 산출물(스크린샷·스냅샷)
+/.playwright-mcp/
 
 # claude code (local-only settings)
 .claude/settings.local.json
