@@ -19,6 +19,18 @@ export const OG = {
   chipBg: "#F4F2EF", // 비활성 토큰 배경
 } as const;
 
+/**
+ * 로고 마크(플레이트) 색 — app/globals.css 의 --mark-* 와 같은 값.
+ * OG/파비콘은 CSS 변수를 못 쓰므로 여기 라이트 그라운드 한 벌만 상수로 둔다.
+ */
+export const MARK = {
+  top: "#FF926B",
+  mid: "#F6432A",
+  bot: "#E43F22",
+  side1: "#E64A31",
+  side2: "#D13A24",
+} as const;
+
 export async function ogFonts() {
   const [bold, extraBold] = await Promise.all([
     readFile(join(process.cwd(), "assets/fonts/Pretendard-Bold.otf")),

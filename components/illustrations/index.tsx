@@ -183,3 +183,50 @@ export function SteamMark({ size = 18, className }: ChipIllustProps) {
     </svg>
   );
 }
+
+/**
+ * 로고 마크 — 좌상단만 각진 판(plate). 앱 아이콘·파비콘·워드마크 락업의 심볼.
+ *
+ * 입체는 그림이 아니라 재질로 만든다. 같은 실루엣을 아래로 밀어 깐 "측면 면"과
+ * 정면의 3스톱 그라디언트, 그리고 앰비언트 섀도 세 겹뿐 — 글로스·하이라이트는 넣지 않는다
+ * (넣는 순간 사탕처럼 보인다). 색은 app/globals.css 의 --mark-* 토큰이라
+ * 라이트/다크 그라운드에서 각각 다른 한 벌이 자동으로 붙는다.
+ *
+ * 그라디언트 id 는 인스턴스마다 같은 값을 쓴다 — 정의 내용이 동일하므로
+ * 문서에 여러 개가 떠도 렌더 결과가 같다(첫 정의가 이긴다).
+ */
+export function LogoMark({ size = 40, className }: ChipIllustProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      style={{ filter: "var(--mark-shadow)" }}
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="snMarkFront" x1="0.08" y1="0" x2="0.3" y2="1">
+          <stop offset="0%" stopColor="var(--mark-top)" />
+          <stop offset="46%" stopColor="var(--mark-mid)" />
+          <stop offset="100%" stopColor="var(--mark-bot)" />
+        </linearGradient>
+        <linearGradient id="snMarkSide" x1="0" y1="0" x2="0.22" y2="1">
+          <stop offset="0%" stopColor="var(--mark-side-1)" />
+          <stop offset="100%" stopColor="var(--mark-side-2)" />
+        </linearGradient>
+      </defs>
+      {/* 측면(두께) — 정면과 같은 실루엣을 우하 대각으로 3/6 밀어 깐다 */}
+      <path
+        d="M11 14h24c14.4 0 24 9.6 24 24s-9.6 24-24 24-24-9.6-24-24z"
+        fill="url(#snMarkSide)"
+      />
+      <path
+        d="M8 8h24c14.4 0 24 9.6 24 24s-9.6 24-24 24S8 46.4 8 32z"
+        fill="url(#snMarkFront)"
+      />
+    </svg>
+  );
+}

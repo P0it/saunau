@@ -194,3 +194,29 @@ body {
     animation: none;
   }
 }
+
+/*
+ * 로고 마크(플레이트) 팔레트 — components/illustrations/LogoMark.
+ * 정면 3스톱 + 측면(아래로 밀린 두께 면)의 톤온톤 레드. 검정을 섞지 않고
+ * 명도만 내려서 흰 배경에서도 탁해지지 않는다. 다크 그라운드용 한 벌을 따로 둔다.
+ */
+:root {
+  --mark-top: #ff926b;
+  --mark-mid: #f6432a;
+  --mark-bot: #e43f22;
+  --mark-side-1: #e64a31;
+  --mark-side-2: #d13a24;
+  --mark-shadow: drop-shadow(0 8px 15px rgba(150, 35, 15, 0.18))
+    drop-shadow(0 2px 4px rgba(150, 35, 15, 0.12));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --mark-top: #ffa47e;
+    --mark-mid: #f84b36;
+    --mark-bot: #ea4c2e;
+    --mark-side-1: #ec5238;
+    --mark-side-2: #d5432a;
+    --mark-shadow: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.3))
+      drop-shadow(0 3px 14px rgba(255, 90, 60, 0.16));
+  }
+}
