@@ -4,7 +4,8 @@ import { OG, ogFonts } from "@/lib/og";
 /**
  * 파비콘(모던 브라우저용) — 브랜드 레드 둥근 사각 + 흰 워드마크 첫 글자 "사".
  * 파비콘 크기(16~32px)에선 네 글자 워드마크가 안 읽혀 첫 글자만 쓴다.
- * 레거시 폴백은 app/favicon.ico (같은 디자인, scripts 로 생성).
+ * 레거시 폴백은 app/favicon.ico — 이 파일을 렌더한 결과를
+ * scripts/make-favicon.mjs 로 16/32/48 ICO 로 묶은 것. 디자인을 바꾸면 다시 돌릴 것.
  */
 
 export const size = { width: 64, height: 64 };
