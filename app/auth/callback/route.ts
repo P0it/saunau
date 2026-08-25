@@ -1,6 +1,10 @@
 /**
- * 매직링크 콜백 — Supabase가 보낸 PKCE 코드를 세션으로 교환하고 마이페이지로 리다이렉트.
- * 이메일의 링크는 Supabase verify 엔드포인트를 거쳐 `?code=...`로 이 라우트에 도달한다.
+ * OAuth·매직링크 콜백 — Supabase가 보낸 PKCE 코드를 세션으로 교환한다.
+ * 카카오·구글은 동의 후 이 라우트로 돌아오고, 이메일 링크는 Supabase verify
+ * 엔드포인트를 거쳐 `?code=...`로 도달한다.
+ *
+ * 교환에 성공하면 가입 절차 완료 여부를 보고 목적지를 정한다 —
+ * 아직이면 /welcome(약관 동의+닉네임), 끝났으면 원래 가려던 곳.
  */
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -14,6 +18,18 @@ export async function GET(request: Request) {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      const { data } = await supabase.auth.getUser();
+      const userId = data.user?.id;
+      if (userId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("onboarded_at")
+          .eq("id", userId)
+          .maybeSingle();
+        if (!profile?.onboarded_at) {
+          return NextResponse.redirect(`${origin}/welcome`);
+        }
+      }
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

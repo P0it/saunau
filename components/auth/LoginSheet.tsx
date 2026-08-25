@@ -1,15 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { X, Mail, CheckCircle2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 /**
- * 로그인 시트 — 구글 OAuth(주) + 이메일 매직링크(폴백). 비밀번호·가입 폼 없음.
- * 구글: signInWithOAuth → 구글 동의 → /auth/callback(코드교환). 웹에서 마찰 최소.
- * 이메일: signInWithOtp → "메일함 확인" 안내(구글 계정이 없는 사용자용 폴백).
+ * 로그인 시트 — 카카오(주) · 구글(보조) OAuth + 이메일 매직링크(폴백). 비밀번호 폼 없음.
+ * OAuth: signInWithOAuth → 동의 → /auth/callback(코드교환) → 미가입이면 /welcome.
+ * 이메일: signInWithOtp → "메일함 확인" 안내.
+ *
+ * provider 활성화는 Supabase 대시보드에서 해야 한다 — docs/auth-setup.md 참고.
  * FilterSheet와 동일한 하단 시트 스타일.
  */
+type OAuthProvider = "kakao" | "google";
+
 export function LoginSheet({
   open,
   onClose,
@@ -22,26 +27,26 @@ export function LoginSheet({
     "idle",
   );
   const [errorMsg, setErrorMsg] = useState("");
-  const [googleBusy, setGoogleBusy] = useState(false);
+  const [busy, setBusy] = useState<OAuthProvider | null>(null);
 
   if (!open) return null;
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
-  async function signInWithGoogle() {
-    if (googleBusy) return;
-    setGoogleBusy(true);
+  async function signInWith(provider: OAuthProvider) {
+    if (busy) return;
+    setBusy(provider);
     setErrorMsg("");
     const supabase = createSupabaseBrowserClient();
-    // 성공 시 구글로 리다이렉트되므로 이후 UI는 필요 없음. 실패만 여기서 처리.
+    // 성공 시 provider로 리다이렉트되므로 이후 UI는 필요 없음. 실패만 여기서 처리.
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
+      provider,
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) {
       setStatus("error");
       setErrorMsg(error.message);
-      setGoogleBusy(false);
+      setBusy(null);
     }
   }
 
@@ -103,15 +108,26 @@ export function LoginSheet({
             </div>
           ) : (
             <>
-              {/* 구글 OAuth — 주 로그인. 웹에서 이미 로그인된 구글 계정이면 1~2탭. */}
+              {/* 카카오 — 주 로그인. 국내 사용자는 대부분 이미 로그인된 상태라 1~2탭. */}
               <button
                 type="button"
-                onClick={signInWithGoogle}
-                disabled={googleBusy}
-                className="flex h-[50px] w-full items-center justify-center gap-[10px] rounded-[14px] border border-line bg-white text-[15px] font-semibold text-ink disabled:opacity-40"
+                onClick={() => signInWith("kakao")}
+                disabled={busy !== null}
+                className="flex h-[50px] w-full items-center justify-center gap-[10px] rounded-[14px] bg-[#FEE500] text-[15px] font-semibold text-[#191600] disabled:opacity-40"
+              >
+                <KakaoGlyph />
+                {busy === "kakao" ? "카카오로 이동 중…" : "카카오로 계속하기"}
+              </button>
+
+              {/* 구글 — 보조. 카카오 계정이 없는 사용자용. */}
+              <button
+                type="button"
+                onClick={() => signInWith("google")}
+                disabled={busy !== null}
+                className="mt-[10px] flex h-[50px] w-full items-center justify-center gap-[10px] rounded-[14px] border border-line bg-white text-[15px] font-semibold text-ink disabled:opacity-40"
               >
                 <GoogleGlyph />
-                {googleBusy ? "구글로 이동 중…" : "구글로 계속하기"}
+                {busy === "google" ? "구글로 이동 중…" : "구글로 계속하기"}
               </button>
 
               {/* 구분선 — 폴백(이메일) 안내 */}
@@ -127,7 +143,7 @@ export function LoginSheet({
               <div className="mt-[14px] flex items-center gap-[10px] rounded-[12px] border border-line bg-white px-[14px] py-[12px]">
                 <Mail size={18} className="text-muted" />
                 {/* autoFocus 금지 — 모바일에서 시트가 뜨자마자 키보드(+툴바)가 올라와
-                    뷰포트가 밀리며 레이아웃이 깨진다. 주 동선도 구글 버튼이라 자동 포커스 불필요. */}
+                    뷰포트가 밀리며 레이아웃이 깨진다. 주 동선도 소셜 버튼이라 불필요. */}
                 <input
                   type="email"
                   inputMode="email"
@@ -144,7 +160,7 @@ export function LoginSheet({
 
               {status === "error" && (
                 <p className="mt-[8px] text-[12px] text-brand">
-                  메일 발송에 실패했어요. 잠시 후 다시 시도해주세요.
+                  로그인에 실패했어요. 잠시 후 다시 시도해주세요.
                   {errorMsg ? ` (${errorMsg})` : ""}
                 </p>
               )}
@@ -158,20 +174,39 @@ export function LoginSheet({
                 {status === "sending" ? "보내는 중…" : "로그인 링크 받기"}
               </button>
 
-              {/* 간주 동의. 약관·개인정보처리방침 페이지가 생기면 아래 문구를
-                  /terms · /privacy 링크로 교체. */}
+              {/* 실제 동의는 로그인 후 /welcome 에서 받는다. 여기선 문서 위치만 안내. */}
               <p className="mt-[12px] text-center text-[11px] leading-[1.6] text-[#A39D94]">
-                로그인하면 <span className="font-semibold text-muted">이용약관</span>
+                로그인하면{" "}
+                <Link href="/terms" className="font-semibold text-muted underline">
+                  이용약관
+                </Link>
                 {" 및 "}
-                <span className="font-semibold text-muted">개인정보처리방침</span>
+                <Link
+                  href="/privacy"
+                  className="font-semibold text-muted underline"
+                >
+                  개인정보처리방침
+                </Link>
                 에<br />
-                동의하는 것으로 간주됩니다.
+                동의 절차가 이어집니다.
               </p>
             </>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+/** 카카오 브랜드 마크(말풍선). 외부 브랜드 자산이라 서비스 일러스트 폴더와 분리. */
+function KakaoGlyph() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="#191600"
+        d="M12 3C6.99 3 2.93 6.2 2.93 10.15c0 2.52 1.66 4.73 4.15 5.99-.18.65-.66 2.37-.75 2.74-.12.46.17.45.35.33.15-.1 2.28-1.55 3.2-2.18.7.1 1.4.16 2.12.16 5.01 0 9.07-3.2 9.07-7.04C21.07 6.2 17.01 3 12 3z"
+      />
+    </svg>
   );
 }
 

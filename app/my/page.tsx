@@ -56,7 +56,9 @@ export default function MyPage() {
       {/* 상단 계정 헤더는 로그인 상태에서만. 비로그인은 중앙 프롬프트가 로그인 유도(중복 제거). */}
       {(authLoading || user) && (
         <ProfileHeader
+          loggedIn={Boolean(user)}
           email={user?.email ?? null}
+          provider={user?.provider ?? null}
           nickname={nickname}
           loading={authLoading}
           onOpen={() => setAuthOpen(true)}

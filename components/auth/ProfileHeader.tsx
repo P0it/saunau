@@ -5,21 +5,34 @@ import { User, ChevronRight } from "lucide-react";
 /**
  * 마이페이지 상단 계정 헤더.
  * - 비로그인: "로그인하세요" + 로그인 버튼(탭하면 로그인 시트)
- * - 로그인: 닉네임 첫 글자 아바타 + 닉네임 + 이메일(탭하면 계정 시트)
+ * - 로그인: 닉네임 첫 글자 아바타 + 닉네임 + 로그인 수단(탭하면 계정 시트)
  * 데이터(상태/닉네임)는 페이지의 useAuth에서 props로 받는다(중복 구독 회피).
+ *
+ * 로그인 판정은 `loggedIn`(=user.id 유무)으로 받는다 — 카카오는 이메일이 선택
+ * 동의라 이메일 유무로 판정하면 로그인한 사용자가 비로그인으로 보인다.
  */
+const PROVIDER_LABEL: Record<string, string> = {
+  kakao: "카카오 계정",
+  google: "구글 계정",
+  email: "이메일 로그인",
+};
+
 export function ProfileHeader({
+  loggedIn,
   email,
+  provider,
   nickname,
   loading,
   onOpen,
 }: {
+  loggedIn: boolean;
   email: string | null;
+  provider: string | null;
   nickname: string | null;
   loading: boolean;
   onOpen: () => void;
 }) {
-  const loggedIn = email != null;
+  const subtitle = email ?? PROVIDER_LABEL[provider ?? ""] ?? "로그인됨";
 
   return (
     <div className="px-[20px] pb-[12px] pt-[16px]">
@@ -52,7 +65,7 @@ export function ProfileHeader({
                 {nickname ?? "사우나우님"}
               </div>
               <div className="mt-[1px] truncate text-[12px] text-muted">
-                {email}
+                {subtitle}
               </div>
             </>
           ) : (
