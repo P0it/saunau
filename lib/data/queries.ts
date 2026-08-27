@@ -221,16 +221,36 @@ export async function searchSaunas(q: string, limit = 40): Promise<Sauna[]> {
   const term = q.trim();
   if (!term) return [];
   const like = `%${term}%`;
+  // 정렬 재료를 확보하려고 limit 보다 넉넉히 받아온 뒤 관련도로 줄인다.
+  // (DB 정렬로는 "이름 일치가 주소 일치보다 위" 를 표현할 수 없다.)
   const [{ data, error }, { images }] = await Promise.all([
     discoverBase()
       .or(
         `name.ilike.${like},sigungu.ilike.${like},dong.ilike.${like},address.ilike.${like}`,
       )
-      .limit(limit),
+      .limit(limit * 4),
     getContentPolicy(),
   ]);
   if (error) throw error;
-  return (data ?? []).map((r: any) => mapRow(r, images));
+  return (data ?? [])
+    .map((r: any) => mapRow(r, images))
+    .sort((a, b) => searchScore(b, term) - searchScore(a, term))
+    .slice(0, limit);
+}
+
+/**
+ * 검색 관련도 — 이름 정확 일치 > 이름 시작 > 이름 포함 > 지역(동/구) > 주소 순.
+ * "역삼동" 처럼 지역어를 넣었을 때 상호에 그 글자가 낀 엉뚱한 매장이 위로 오지 않게 한다.
+ */
+function searchScore(s: Sauna, term: string): number {
+  const t = term.toLowerCase();
+  const name = s.name.toLowerCase();
+  if (name === t) return 100;
+  if (name.startsWith(t)) return 80;
+  if (name.includes(t)) return 60;
+  if ((s.dong ?? "").toLowerCase().includes(t)) return 40;
+  if ((s.sigungu ?? "").toLowerCase().includes(t)) return 30;
+  return 10; // 주소 어딘가에만 걸린 경우
 }
 
 /** 찜·최근·다녀옴 등 id 배열로 조회. 폐업도 resolve. */
