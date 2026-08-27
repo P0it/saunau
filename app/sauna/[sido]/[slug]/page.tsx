@@ -11,7 +11,7 @@ import { CATEGORY_LABEL, primaryCategory } from "@/lib/data/types";
 import { FavoriteScrubber } from "@/components/sauna/FavoriteScrubber";
 import { RecordView } from "@/components/sauna/RecordView";
 import { SaunaGallery } from "@/components/sauna/SaunaGallery";
-import { UserPhotoUpload } from "@/components/sauna/UserPhotoUpload";
+import { AdminPhotoUpload } from "@/components/sauna/AdminPhotoUpload";
 import { SaunaDetailBody } from "@/components/sauna/SaunaDetailBody";
 import { FloatingBack } from "@/components/layout/FloatingBack";
 import { FlameRating } from "@/components/sauna/FlameRating";
@@ -116,7 +116,7 @@ export default async function SaunaDetailPage({
           <FavoriteScrubber saunaId={s.id} size={30} onLight />
         </div>
         <div className="absolute bottom-[12px] right-[12px]">
-          <UserPhotoUpload saunaId={s.id} />
+          <AdminPhotoUpload saunaId={s.id} />
         </div>
       </div>
 

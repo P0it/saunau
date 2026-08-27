@@ -153,7 +153,6 @@ export interface SaunaReview {
   rating: number; // 1~5
   body: string | null;
   nickname: string;
-  photos: SaunaPhoto[]; // 후기 첨부 사진(후기 카드 전용, 갤러리엔 안 뜸). 없으면 빈 배열.
   created_at: string; // ISO datetime
 }
 

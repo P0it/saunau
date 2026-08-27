@@ -330,7 +330,6 @@ export async function getSaunaReviews(saunaId: string): Promise<SaunaReview[]> {
     p_sauna_id: saunaId,
   });
   if (error) return [];
-  const photosByReview = await getReviewPhotos(saunaId);
   return (data ?? []).map((r: any) => ({
     id: r.id,
     saunaId,
@@ -338,43 +337,11 @@ export async function getSaunaReviews(saunaId: string): Promise<SaunaReview[]> {
     rating: r.rating ?? 0,
     body: r.body ?? null,
     nickname: r.nickname ?? "사우나우님",
-    photos: photosByReview.get(r.id) ?? [],
     created_at: r.created_at,
   }));
 }
 
-/**
- * 후기 첨부 사진(매장 단위) → review_id 로 묶은 맵. 이미지 킬스위치(images.show) 적용.
- * review 사진은 source='user' 라 기존 read RLS(is_active+approved)로 anon 도 읽힌다.
- */
-export async function getReviewPhotos(
-  saunaId: string,
-): Promise<Map<string, SaunaPhoto[]>> {
-  const map = new Map<string, SaunaPhoto[]>();
-  const { images } = await getContentPolicy();
-  if (!images.show) return map;
-  const { data, error } = await supabasePublic
-    .from("sauna_photos")
-    .select("id, url, width, height, review_id, created_at")
-    .eq("sauna_id", saunaId)
-    .eq("is_active", true)
-    .not("review_id", "is", null)
-    .order("created_at", { ascending: true });
-  if (error) return map;
-  for (const r of data ?? []) {
-    const photo: SaunaPhoto = {
-      id: (r as any).id,
-      url: (r as any).url,
-      width: (r as any).width ?? null,
-      height: (r as any).height ?? null,
-    };
-    const key = (r as any).review_id as string;
-    const arr = map.get(key);
-    if (arr) arr.push(photo);
-    else map.set(key, [photo]);
-  }
-  return map;
-}
+
 
 /* ── 온도 제보 집계(회원) ── */
 
