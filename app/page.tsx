@@ -9,6 +9,7 @@ import { TempHeadline } from "@/components/sauna/TempHeadline";
 import { saunaHref } from "@/components/sauna/SaunaCard";
 import { SaunaImage } from "@/components/sauna/SaunaImage";
 import { ArticleThumb } from "@/components/magazine/ArticleThumb";
+import { AppFooter } from "@/components/layout/AppFooter";
 import {
   TrendingTubIllust,
   HotSaunaRoomIllust,
@@ -214,6 +215,9 @@ export default async function HomePage() {
         {/* 최근 본 사우나 (없으면 숨김) */}
         <RecentPeek />
       </div>
+
+      {/* 데이터 출처·문의·약관 */}
+      <AppFooter />
     </div>
   );
 }

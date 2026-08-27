@@ -104,3 +104,61 @@ export function TempChip({
     </div>
   );
 }
+
+/**
+ * 아이보리 타일 위 플레이트 마크 — 파비콘(app/icon)·홈화면 아이콘(app/apple-icon) 공용.
+ * satori 가 SVG 그라디언트를 못 받아 div 두 장(측면+정면)을 쌓아 같은 그림을 다시 그린다.
+ * 좌상단만 각진 사각 = borderRadius "0 half half half". 글로스는 넣지 않는다(무광 유지).
+ */
+export function MarkTile({ size }: { size: number }) {
+  const box = Math.round(size * 0.6875); // 64 → 44 비율 유지
+  const radius = box / 2;
+  const offset = Math.max(1, Math.round(size * 0.047)); // 측면 두께
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(150deg, #FFFFFF 0%, #EAE5DE 100%)",
+        borderRadius: Math.round(size * 0.219),
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          position: "relative",
+          width: box + offset,
+          height: box + offset * 2,
+        }}
+      >
+        {/* 측면(두께) */}
+        <div
+          style={{
+            position: "absolute",
+            left: offset,
+            top: offset * 2,
+            width: box,
+            height: box,
+            borderRadius: `0 ${radius}px ${radius}px ${radius}px`,
+            background: `linear-gradient(160deg, ${MARK.side1} 0%, ${MARK.side2} 100%)`,
+          }}
+        />
+        {/* 정면 */}
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: box,
+            height: box,
+            borderRadius: `0 ${radius}px ${radius}px ${radius}px`,
+            background: `linear-gradient(163deg, ${MARK.top} 0%, ${MARK.mid} 46%, ${MARK.bot} 100%)`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}

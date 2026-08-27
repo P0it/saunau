@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getSitemapSaunas, getSitemapArticles } from "@/lib/data/queries";
+import { SITE_URL } from "@/lib/site";
 
 /**
  * 검색엔진용 사이트맵. 매장 상세(5천여 건) + 읽을거리 + 정적 화면.
@@ -8,7 +9,7 @@ import { getSitemapSaunas, getSitemapArticles } from "@/lib/data/queries";
  */
 export const revalidate = 3600;
 
-const BASE = "https://saunau.vercel.app";
+const BASE = SITE_URL;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();

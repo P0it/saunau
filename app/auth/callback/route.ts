@@ -9,10 +9,19 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+/**
+ * 돌아갈 경로는 우리 앱 내부여야 한다 — "//evil.com" 같은 프로토콜 상대 URL 이나
+ * 절대 URL 이 들어오면 무시하고 기본값으로 돌린다(오픈 리다이렉트 차단).
+ */
+function safeNext(raw: string | null): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/my";
+  return raw;
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/my";
+  const next = safeNext(searchParams.get("next"));
 
   if (code) {
     const supabase = await createSupabaseServerClient();

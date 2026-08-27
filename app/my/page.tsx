@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Heart, MessageSquareText, Plus, Trash2, Lock } from "lucide-react";
 import { CATEGORY_LABEL, primaryCategory, type Sauna } from "@/lib/data/types";
 import { useFavorites } from "@/lib/favorites";
-import { useMyReviews, type MyReview } from "@/lib/reviews";
+import { useMyReviews, REVIEW_BODY_MAX, type MyReview } from "@/lib/reviews";
 import { useRecords } from "@/lib/records";
 import { getSaunasByIds } from "@/lib/data/queries";
 import { useAuth } from "@/lib/auth";
@@ -16,6 +16,7 @@ import { RecordsTab } from "@/components/my/RecordsTab";
 import { LoginSheet } from "@/components/auth/LoginSheet";
 import { AccountSheet } from "@/components/auth/AccountSheet";
 import { ProfileHeader } from "@/components/auth/ProfileHeader";
+import { AppFooter } from "@/components/layout/AppFooter";
 
 type Tab = "review" | "record";
 
@@ -101,6 +102,11 @@ export default function MyPage() {
       ) : (
         <RecordsTab />
       )}
+
+      {/* 데이터 출처·문의·약관 — 비회원도 닿아야 하므로 시트가 아니라 화면 하단에 둔다. */}
+      <div className="mt-auto">
+        <AppFooter />
+      </div>
 
       {user ? (
         <AccountSheet open={authOpen} onClose={() => setAuthOpen(false)} />
@@ -276,9 +282,13 @@ function ReviewCard({
               onChange={(e) => setDraft(e.target.value)}
               rows={3}
               autoFocus
+              maxLength={REVIEW_BODY_MAX}
               placeholder="한줄평을 남겨보세요"
               className="w-full rounded-[12px] border border-line bg-card p-[12px] text-[13px] leading-[1.55] text-ink outline-none"
             />
+            <div className="mt-[4px] text-right text-[11px] text-muted tabular-nums">
+              {draft.length}/{REVIEW_BODY_MAX}
+            </div>
             <div className="mt-[8px] flex justify-end gap-[8px]">
               <button
                 type="button"

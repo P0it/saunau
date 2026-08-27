@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/site";
 
 /**
  * 크롤러 규칙. 개인화 화면(/my, /favorites)·운영자 화면(/admin)과 API·인증 콜백은 색인 대상이 아니다.
@@ -11,6 +12,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/api/", "/auth/", "/admin", "/my", "/favorites"],
     },
-    sitemap: "https://saunau.vercel.app/sitemap.xml",
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }
