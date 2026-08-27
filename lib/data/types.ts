@@ -115,6 +115,8 @@ export interface SaunaPhoto {
   url: string;
   width: number | null;
   height: number | null;
+  /** 출처 — 갤러리 출처 표기(저작권 고지)에 쓴다. 운영자 사진('editor')은 표기하지 않는다. */
+  source: PhotoSource;
 }
 
 /**

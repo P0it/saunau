@@ -289,6 +289,7 @@ export async function getSaunaPhotos(saunaId: string): Promise<SaunaPhoto[]> {
       url: r.url, // 항상 우리 Storage URL
       width: r.width ?? null,
       height: r.height ?? null,
+      source: r.source, // 출처 표기용(저작권 고지)
     }));
 }
 

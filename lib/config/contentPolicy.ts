@@ -5,9 +5,13 @@
  * 재배포 없이 즉시 토글한다. queries.ts 가 모든 조회에서 이 정책을 적용하므로,
  * 서버 컴포넌트든 클라이언트 컴포넌트든 동일하게 킬스위치가 걸린다.
  *
- *  - 1순위: system_flags(images_enabled / blog_reviews_enabled)
+ *  - 1순위: system_flags(images_enabled / blog_reviews_enabled / photo_sources)
  *  - 폴백:  env NEXT_PUBLIC_IMAGES_ENABLED / NEXT_PUBLIC_BLOG_REVIEWS_ENABLED (DB 장애 시)
  *  - 기본:  모두 on
+ *
+ * `photo_sources` 는 노출을 허용할 사진 출처 배열이다. 특정 출처(예: 권리 문제가
+ * 제기된 'google')만 즉시 내려야 할 때, 사진을 지우지 않고 이 배열에서 빼면 된다.
+ * 미설정이면 전 출처 허용(ALL_SOURCES).
  *
  * ⚠ queries.ts 가 클라이언트 컴포넌트에서도 import 되므로 이 모듈은 server-only 가 될 수 없다.
  *    그래서 next/cache(unstable_cache) 대신 모듈 레벨 TTL 캐시를 쓴다.
@@ -36,6 +40,15 @@ function envBool(name: string, fallback: boolean): boolean {
   return !/^(false|0|off|no)$/i.test(v.trim());
 }
 
+/** jsonb 배열 플래그 → 알려진 출처만 남긴 목록. 형식이 틀리거나 비면 null(=기본값 사용). */
+function resolveSources(flagValue: unknown): PhotoSource[] | null {
+  if (!Array.isArray(flagValue)) return null;
+  const known = flagValue.filter((v): v is PhotoSource =>
+    ALL_SOURCES.includes(v as PhotoSource),
+  );
+  return known.length ? known : null;
+}
+
 /** jsonb 플래그(boolean) 우선, 없으면 env 폴백(기본 on). */
 function resolveBool(flagValue: unknown, envName: string): boolean {
   if (typeof flagValue === "boolean") return flagValue;
@@ -57,7 +70,7 @@ async function load(): Promise<ContentPolicy> {
   return {
     images: {
       show: resolveBool(flags["images_enabled"], "NEXT_PUBLIC_IMAGES_ENABLED"),
-      allowedSources: ALL_SOURCES,
+      allowedSources: resolveSources(flags["photo_sources"]) ?? ALL_SOURCES,
     },
     blogReviews: {
       show: resolveBool(

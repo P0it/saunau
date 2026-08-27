@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
       moderation_status: "approved",
       sort_order: 0,
     })
-    .select("id, url, width, height")
+    .select("id, url, source, width, height")
     .single();
   if (insErr || !row) {
     // 롤백: 방금 올린 객체 정리(베스트 에포트).
@@ -131,6 +131,7 @@ export async function POST(req: NextRequest) {
     url: row.url,
     width: row.width ?? null,
     height: row.height ?? null,
+    source: row.source,
   };
   return NextResponse.json({ ok: true, photo });
 }
