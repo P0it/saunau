@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { BottomTabBar } from "./BottomTabBar";
-import { SplashScreen, SPLASH_TOTAL_MS } from "./SplashScreen";
-import { requestLocationOnce } from "@/lib/geo";
+import { SplashScreen } from "./SplashScreen";
+import { refreshLocationIfGranted } from "@/lib/geo";
 import { useAuth } from "@/lib/auth";
 
 /**
@@ -24,11 +24,12 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
 
   const { loading: authLoading, user, onboarded } = useAuth();
 
-  // 앱 로드 시 1회 위치 동의 — "내 주변"이 내 위치 기준으로 열리도록 좌표를 캐시.
-  // 스플래시가 완전히 사라진 뒤 요청해야 권한 프롬프트가 로딩 화면을 가리지 않는다.
+  // 이미 위치를 허용한 사용자만 좌표를 조용히 갱신한다(프롬프트 없음).
+  // ⚠ 권한을 아직 안 준 사용자에게 여기서 묻지 않는다 — 예전엔 스플래시 직후 자동으로
+  //    물었는데, 사용자가 원한 적 없는 시점이라 이유 모를 팝업이 됐다. 묻는 자리는
+  //    "내 주변"을 누르는 순간이고, 그 앞에 LocationNotice 로 용도를 먼저 알린다.
   useEffect(() => {
-    const timer = setTimeout(requestLocationOnce, SPLASH_TOTAL_MS);
-    return () => clearTimeout(timer);
+    refreshLocationIfGranted();
   }, []);
 
   // 가입 절차 게이트 — 로그인은 했지만 약관 동의·닉네임이 없으면 /welcome 으로.

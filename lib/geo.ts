@@ -9,13 +9,16 @@ import { useEffect, useState } from "react";
  * 권한 동의가 "계속" 이어지도록:
  *  - 좌표는 localStorage(=세션 넘어 유지)에 저장. sessionStorage 가 아니다.
  *  - 브라우저 권한이 이미 granted 면 로드 시마다 조용히 좌표를 재취득(프롬프트 없음)해 신선하게 유지.
- *  - 권한 미정(prompt)일 때만 세션당 1회 자동 요청(과한 팝업 방지). 거부(denied)면 조용히 폴백.
- *  - 자동 요청이 막히는 브라우저를 위해, 목록 화면이 사용자 제스처로 requestLocation() 을 직접 호출할 수 있다.
+ *
+ * ⚠ 권한 프롬프트는 **사용자가 "내 주변"을 누른 순간에만** 띄운다.
+ *   예전엔 앱 로드 후 스플래시가 끝나면 자동으로 물었는데, 사용자가 원한 적 없는 시점이라
+ *   이유 모를 팝업이 첫인상을 깎았고, 위치 이용에 대한 우리 쪽 고지도 없는 상태였다.
+ *   지금은 needsLocationNotice() 로 "물어봐야 하는 상황"인지 판별해 먼저 용도를 알리고,
+ *   사용자가 동의하면 requestLocation() 을 부른다.
  */
 export type Coords = { lat: number; lng: number };
 
 const KEY = "saunau:geo"; // { lat, lng, ts } — localStorage
-const ASKED = "saunau:geo-asked"; // 권한 prompt 상태에서 자동요청 1회 throttle(sessionStorage)
 const EVENT = "saunau:geo"; // 좌표 확보 시 같은 탭 내 구독자에게 알림
 
 export function getCachedCoords(): Coords | null {
@@ -72,38 +75,40 @@ export function requestLocation(): Promise<Coords | null> {
 }
 
 /**
- * 앱 로드 시 호출 — 권한 상태에 맞춰 좌표를 확보/갱신.
- *  granted → 매 로드 조용히 재취득(프롬프트 없음, 항상 최신).
- *  prompt  → 세션당 1회 자동 요청.
- *  denied  → 아무것도 안 함(전국 폴백).
- * permissions API 미지원 환경은 세션당 1회 시도로 폴백.
+ * 앱 로드 시 호출 — **이미 허용한 사용자**의 좌표만 조용히 갱신한다(프롬프트 없음).
+ * 권한이 prompt/denied 면 아무것도 하지 않는다 — 묻는 건 사용자가 "내 주변"을 누를 때다.
  */
-export function requestLocationOnce(): void {
+export function refreshLocationIfGranted(): void {
   if (typeof window === "undefined" || !navigator.geolocation) return;
+  if (!navigator.permissions?.query) return; // 상태를 모르면 건드리지 않는다(프롬프트 위험)
+  navigator.permissions
+    .query({ name: "geolocation" as PermissionName })
+    .then((status) => {
+      if (status.state === "granted") void requestLocation();
+    })
+    .catch(() => {
+      /* 상태 조회 실패 — 조용히 넘어간다 */
+    });
+}
 
-  const askOncePerSession = () => {
-    if (sessionStorage.getItem(ASKED)) return;
-    sessionStorage.setItem(ASKED, "1");
-    void requestLocation();
-  };
-
-  if (navigator.permissions?.query) {
-    navigator.permissions
-      .query({ name: "geolocation" as PermissionName })
-      .then((status) => {
-        if (status.state === "granted") {
-          void requestLocation(); // 권한 있음 → 프롬프트 없이 매번 신선하게
-        } else if (status.state === "prompt") {
-          askOncePerSession();
-        }
-        // denied → 폴백
-      })
-      .catch(() => askOncePerSession());
-    return;
+/**
+ * "위치를 왜 쓰는지" 고지를 먼저 보여줘야 하는 상황인가.
+ * 이미 좌표가 있거나 권한이 확정(granted/denied)이면 고지 없이 바로 진행하면 된다.
+ * 상태를 알 수 없는 브라우저(permissions API 미지원)에서는 고지를 보여주는 쪽을 택한다 —
+ * 설명 없는 프롬프트보다 낫다.
+ */
+export async function needsLocationNotice(): Promise<boolean> {
+  if (typeof window === "undefined" || !navigator.geolocation) return false;
+  if (getCachedCoords()) return false;
+  if (!navigator.permissions?.query) return true;
+  try {
+    const status = await navigator.permissions.query({
+      name: "geolocation" as PermissionName,
+    });
+    return status.state === "prompt";
+  } catch {
+    return true;
   }
-
-  // permissions API 없음 → 좌표 없을 때만 세션당 1회
-  if (!getCachedCoords()) askOncePerSession();
 }
 
 /** 캐시된 좌표를 구독(동의가 늦게 떨어지거나 다른 탭에서 갱신돼도 반영). */

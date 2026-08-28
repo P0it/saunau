@@ -13,8 +13,9 @@ import {
 } from "lucide-react";
 import { getDiscoverSaunas, getSaunasByCategory, getSaunasNearby } from "@/lib/data/queries";
 import { inCategory, type Sauna, type VenueType } from "@/lib/data/types";
-import { useCoords, requestLocation } from "@/lib/geo";
+import { useCoords, requestLocation, needsLocationNotice } from "@/lib/geo";
 import { SaunaCard } from "@/components/sauna/SaunaCard";
+import { LocationNotice } from "@/components/geo/LocationNotice";
 import { SaunaListSkeleton } from "@/components/ui/Skeleton";
 import { Segment } from "@/components/ui/Segment";
 import {
@@ -88,11 +89,21 @@ function ListInner() {
   // 앱 로드 시 받은 내 위치(있으면 거리순 "내 주변", 없으면 전국 발견 목록).
   const coords = useCoords();
   const [locating, setLocating] = useState(false);
-  // 자동요청이 막히는 브라우저 대비 — 사용자 제스처로 직접 권한 요청.
-  function requestMyLocation() {
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  /** 실제 권한 요청 — 고지를 거친 뒤(또는 이미 권한이 확정된 경우) 호출된다. */
+  function locate() {
     if (locating) return;
     setLocating(true);
     void requestLocation().finally(() => setLocating(false));
+  }
+  /** 사용자 제스처 진입점 — 아직 물어본 적 없으면 용도부터 알린다. */
+  async function requestMyLocation() {
+    if (locating) return;
+    if (await needsLocationNotice()) {
+      setNoticeOpen(true);
+      return;
+    }
+    locate();
   }
   const [all, setAll] = useState<Sauna[]>([]);
   const [loading, setLoading] = useState(true);
@@ -275,7 +286,7 @@ function ListInner() {
           </span>
           <button
             type="button"
-            onClick={requestMyLocation}
+            onClick={() => void requestMyLocation()}
             aria-busy={locating}
             className="flex flex-none items-center gap-[5px] rounded-full bg-brand px-[12px] py-[7px] text-[13px] font-semibold text-white active:scale-[0.98]"
           >
@@ -292,6 +303,15 @@ function ListInner() {
           </button>
         </div>
       )}
+
+      <LocationNotice
+        open={noticeOpen}
+        onClose={() => setNoticeOpen(false)}
+        onAllow={() => {
+          setNoticeOpen(false);
+          locate();
+        }}
+      />
 
       {/* list */}
       <div className="flex flex-col gap-[14px] px-[16px] pb-[20px]">
