@@ -50,8 +50,9 @@ export function SplashScreen({ fullBleed = false }: { fullBleed?: boolean }) {
       }
       style={{ opacity: phase === "fade" ? 0 : 1 }}
     >
-      {/* 말풍선 폭을 고정해 두 마디가 좌·우로 확실히 갈라 서게 한다 */}
-      <div className="flex w-[220px] flex-col gap-[10px]">
+      {/* 두 마디를 화면 좌·우 끝에 붙인다 — 가운데 모아두면 대화가 아니라 목록으로 읽힌다.
+          풀블리드(지도)에서도 안쪽 폭은 430px 로 묶어 두 말풍선이 지나치게 멀어지지 않게. */}
+      <div className="flex w-full max-w-[430px] flex-col gap-[10px] px-6">
         <span className="splash-ask splash-bubble self-start rounded-bl-[7px] bg-[#f0ede8] text-[#46413b]">
           사우?
         </span>
