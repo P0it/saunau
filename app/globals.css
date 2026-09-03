@@ -139,6 +139,15 @@ body {
  * (예전엔 로고 마크가 내려앉고 워드마크가 뜨는 구성이었다. 두 마디가 묻고 답하는
  *  관계라는 걸 형태로 보여주지 못해 채팅 말풍선으로 바꿨다.)
  */
+/*
+ * 바닥색은 한 곳에서만 정한다 — 배경과 말풍선 꼬리를 도려내는 색이 같아야 하므로,
+ * 둘이 따로 놀지 않게 변수로 묶어 자손이 물려받게 한다.
+ */
+.splash-screen {
+  --splash-ground: #231f1d;
+  background: var(--splash-ground);
+}
+
 .splash-bubble {
   position: relative;
   padding: 16px 28px 19px;
@@ -166,13 +175,13 @@ body {
 .splash-ask::before {
   left: -12px;
   width: 27px;
-  background: #f0ede8;
+  background: #3a3532;
   border-bottom-right-radius: 26px;
 }
 .splash-ask::after {
   left: -12px;
   width: 13px;
-  background: #fff;
+  background: var(--splash-ground);
   border-bottom-right-radius: 16px;
 }
 
@@ -185,7 +194,7 @@ body {
 .splash-say::after {
   right: -12px;
   width: 13px;
-  background: #fff;
+  background: var(--splash-ground);
   border-bottom-left-radius: 16px;
 }
 
@@ -244,10 +253,8 @@ body {
 
 /*
  * 김 — 사우나실 김은 평평한 막이 아니라 덩이가 뭉치며 오른다.
- * 한 겹 그라디언트로 밀어 올려봤더니 김이 아니라 회색 막으로 읽혔고,
- * 반대로 진한 덩이를 몇 개만 띄우면 화재 연기가 됐다.
- * → 아주 옅은 덩이를 여럿(겹당 0.085) 겹쳐 쌓는다. 겹치는 자리에서 농도가 붙어
- *   뭉게뭉게가 생기고, 자리를 미리 세 줄로 깔아뒀으므로 끝에는 화면 전체가 덮인다.
+ * 옅은 흰 덩이를 여럿(겹당 0.3) 겹쳐 쌓는다. 겹치는 자리에서 농도가 붙어 뭉게뭉게가
+ * 생기고, 자리를 미리 세 줄로 깔아뒀으므로 끝에는 화면 전체가 덮인다.
  * 크게 흐리는 것(blur 20px)이 핵심 — 덜 흐리면 즉시 비눗방울로 보인다.
  */
 .splash-steam {
@@ -263,9 +270,9 @@ body {
   border-radius: 50%;
   background: radial-gradient(
     circle at 50% 50%,
-    rgba(152, 147, 141, 0.085) 0%,
-    rgba(152, 147, 141, 0.07) 45%,
-    rgba(152, 147, 141, 0) 72%
+    rgba(255, 255, 255, 0.3) 0%,
+    rgba(255, 255, 255, 0.22) 45%,
+    rgba(255, 255, 255, 0) 72%
   );
   filter: blur(20px);
   animation: splash-steam 1.15s cubic-bezier(0.22, 0.75, 0.3, 1) both;
@@ -286,22 +293,24 @@ body {
   }
 }
 
-/* 김이 가장 짙어지는 순간 화면을 덮어, 홈이 드러날 때 이음매가 안 보이게 한다 */
+/*
+ * 김이 짙어지다 끝내 하얗게 밝아지는 구간 — 짙은 수증기는 실제로 새하얗다.
+ * 먹색 바닥을 완전히 덮어야(1.0) 밝은 홈이 드러날 때 어두운 기가 비쳤다 사라지지 않는다.
+ */
 .splash-veil {
   position: absolute;
   inset: 0;
   background: #fff;
   pointer-events: none;
-  animation: splash-veil 0.55s ease-in 2.6s both;
+  animation: splash-veil 0.6s ease-in 2.4s both;
 }
 
-/* 완전한 흰색까지 가지 않는다 — 순백 플래시는 세게 때리고, 홈 배경도 순백이 아니다 */
 @keyframes splash-veil {
   0% {
     opacity: 0;
   }
   100% {
-    opacity: 0.9;
+    opacity: 1;
   }
 }
 

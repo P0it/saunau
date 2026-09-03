@@ -7,8 +7,12 @@ import { useEffect, useState } from "react";
  * 왼쪽(받은 말풍선)이 묻고 오른쪽(보낸 말풍선)이 답한다 — 읽는 순서가 곧 대화 순서라
  * 서비스 이름 두 마디의 관계가 설명 없이 잡힌다.
  *
- * 대화가 끝나면 아래에서 김이 차올라 말풍선을 삼키고, 화면이 하얗게 씻기며 홈으로 넘어간다.
- * 페이드아웃이 곧 전환이라 "스플래시가 사라진다"가 아니라 "김이 걷히니 홈이었다"로 읽힌다.
+ * 바닥은 먹색이다. 실제 수증기는 빛을 산란시켜 주변보다 밝고 연기는 빛을 흡수해 어두운데,
+ * 흰 바닥에 회색 김을 얹으면 바닥을 어둡게 덮게 되어 농도를 아무리 낮춰도 연기로 읽혔다.
+ * 바닥을 어둡게 두면 김이 흰색일 수 있고, 그제서야 같은 움직임이 수증기가 된다.
+ *
+ * 대화가 끝나면 아래에서 흰 김이 차올라 말풍선을 삼키고, 화면이 하얗게 밝아지며 홈으로 넘어간다.
+ * 밝아짐 자체가 전환이라 "스플래시가 사라진다"가 아니라 "김이 걷히니 홈이었다"로 읽힌다.
  *
  * AppFrame 최초 마운트 시 1회만 표시(클라이언트 라우팅 전환에는 다시 안 뜸).
  */
@@ -58,7 +62,7 @@ export function SplashScreen({ fullBleed = false }: { fullBleed?: boolean }) {
     <div
       aria-hidden
       className={
-        "fixed inset-y-0 left-1/2 z-[60] flex w-full -translate-x-1/2 flex-col items-center justify-center overflow-hidden bg-card transition-opacity duration-700 ease-out" +
+        "splash-screen fixed inset-y-0 left-1/2 z-[60] flex w-full -translate-x-1/2 flex-col items-center justify-center overflow-hidden transition-opacity duration-700 ease-out" +
         (fullBleed ? "" : " max-w-[430px]")
       }
       style={{ opacity: phase === "fade" ? 0 : 1 }}
@@ -66,10 +70,10 @@ export function SplashScreen({ fullBleed = false }: { fullBleed?: boolean }) {
       {/* 두 마디를 화면 좌·우 끝에 붙인다 — 가운데 모아두면 대화가 아니라 목록으로 읽힌다.
           풀블리드(지도)에서도 안쪽 폭은 430px 로 묶어 두 말풍선이 지나치게 멀어지지 않게. */}
       <div className="flex w-full max-w-[430px] flex-col gap-[26px] px-6">
-        <span className="splash-ask splash-bubble self-start rounded-bl-[9px] bg-[#f0ede8] text-[#46413b]">
+        <span className="splash-ask splash-bubble self-start rounded-bl-[9px] bg-[#3a3532] text-[#efe9e4]">
           사우?
         </span>
-        <span className="splash-say splash-bubble self-end rounded-br-[9px] bg-brand text-white shadow-[0_8px_22px_rgba(245,64,44,0.3)]">
+        <span className="splash-say splash-bubble self-end rounded-br-[9px] bg-brand text-white shadow-[0_10px_30px_rgba(245,64,44,0.35)]">
           나우!
         </span>
       </div>
