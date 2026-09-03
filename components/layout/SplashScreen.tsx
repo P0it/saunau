@@ -18,15 +18,6 @@ const FADE_MS = 700; // 하얗게 씻긴 화면이 걷히며 홈이 드러나는
 /** 스플래시가 완전히 사라지기까지의 총 시간 — 이후에 떠야 하는 프롬프트류의 지연 기준. */
 export const SPLASH_TOTAL_MS = HOLD_MS + FADE_MS;
 
-/** 김 덩어리 — 폭·가로위치·시작 시각을 어긋나게 둬야 뭉치지 않고 피어오른다. */
-const PUFFS = [
-  { left: "-20%", width: "80%", animationDelay: "1.35s" },
-  { left: "28%", width: "88%", animationDelay: "1.45s" },
-  { left: "-6%", width: "66%", animationDelay: "1.58s" },
-  { left: "44%", width: "72%", animationDelay: "1.66s" },
-  { left: "10%", width: "94%", animationDelay: "1.75s" },
-];
-
 export function SplashScreen({ fullBleed = false }: { fullBleed?: boolean }) {
   const [phase, setPhase] = useState<"show" | "fade" | "done">("show");
 
@@ -61,12 +52,8 @@ export function SplashScreen({ fullBleed = false }: { fullBleed?: boolean }) {
         </span>
       </div>
 
-      {/* 김 — 아래에서 피어올라 말풍선을 지운다 */}
-      <div className="splash-steam">
-        {PUFFS.map((p) => (
-          <span key={p.animationDelay + p.left} style={p} />
-        ))}
-      </div>
+      {/* 김 — 한 겹이 아래에서 통째로 밀려 올라와 화면을 채운다 */}
+      <div className="splash-steam" />
 
       {/* 김이 가장 짙어지는 순간 화면을 하얗게 덮어, 홈이 드러날 때 이음매가 안 보이게 한다 */}
       <div className="splash-veil" />

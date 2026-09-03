@@ -140,6 +140,7 @@ body {
  *  관계라는 걸 형태로 보여주지 못해 채팅 말풍선으로 바꿨다.)
  */
 .splash-bubble {
+  position: relative;
   padding: 11px 20px 13px;
   border-radius: 22px;
   font-size: 30px;
@@ -147,6 +148,45 @@ body {
   letter-spacing: -0.04em;
   line-height: 1.1;
   white-space: nowrap;
+}
+
+/*
+ * 꼬리 — 말풍선 색으로 부리를 하나 그리고(::before), 그 안쪽을 배경색으로 도려낸다(::after).
+ * 삼각형을 붙이는 것보다 곡률이 본체와 이어져서 한 덩어리로 읽힌다.
+ * ⚠ 도려내는 색은 스플래시 바닥색(흰색)에 묶여 있다 — 바닥색을 바꾸면 여기도 같이 바꾼다.
+ */
+.splash-bubble::before,
+.splash-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  height: 21px;
+}
+
+.splash-ask::before {
+  left: -9px;
+  width: 20px;
+  background: #f0ede8;
+  border-bottom-right-radius: 19px;
+}
+.splash-ask::after {
+  left: -9px;
+  width: 10px;
+  background: #fff;
+  border-bottom-right-radius: 12px;
+}
+
+.splash-say::before {
+  right: -9px;
+  width: 20px;
+  background: var(--color-brand);
+  border-bottom-left-radius: 19px;
+}
+.splash-say::after {
+  right: -9px;
+  width: 10px;
+  background: #fff;
+  border-bottom-left-radius: 12px;
 }
 
 @keyframes splash-ask {
@@ -203,43 +243,41 @@ body {
 }
 
 /*
- * 김 — 흰 바탕 위의 흰 김은 안 보이므로 따뜻한 회색으로 깔되 아주 옅게.
- * (붉은 김은 붉은 빛으로 읽혔고, 진한 회색은 화재 연기가 됐다. 김은 그 사이 좁은 폭에만 있다.)
- * 덩어리마다 폭·가로위치·시작 시각이 어긋나야 한 덩이로 뭉치지 않는다.
+ * 김 — 덩어리를 여러 개 띄우면 "뭉게뭉게"가 되어 화재 연기로 읽혔다.
+ * 옅은 한 겹을 화면 아래에 두고 통째로 밀어 올려, 스윽 하고 한 번에 차오르게 한다.
+ *
+ * 기하: 높이는 프레임의 2배(200%), 시작 위치는 프레임 바로 아래(top:100%).
+ * 아래 절반이 균일한 농도, 위 절반이 사라지는 경계다. 제 높이만큼(-100%) 올리면
+ * 균일한 절반이 정확히 프레임을 덮고 경계는 화면 위로 빠져나간다.
  */
 .splash-steam {
   position: absolute;
-  inset: 0;
-  overflow: hidden;
+  top: 100%;
+  left: -10%;
+  right: -10%;
+  height: 200%;
   pointer-events: none;
-}
-
-.splash-steam span {
-  position: absolute;
-  bottom: -34%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 50% 50%,
-    rgba(150, 145, 139, 0.12) 0%,
-    rgba(150, 145, 139, 0.06) 42%,
-    rgba(150, 145, 139, 0) 70%
+  background: linear-gradient(
+    to top,
+    rgba(150, 145, 139, 0.17) 0%,
+    rgba(150, 145, 139, 0.17) 50%,
+    rgba(150, 145, 139, 0) 100%
   );
-  filter: blur(14px);
-  animation: splash-steam 2s cubic-bezier(0.32, 0.66, 0.4, 1) both;
+  filter: blur(16px);
+  animation: splash-steam 1.5s cubic-bezier(0.25, 0.8, 0.35, 1) 1.05s both;
 }
 
 @keyframes splash-steam {
   0% {
     opacity: 0;
-    transform: translateY(34%) scale(0.55);
+    transform: translateY(0);
   }
-  40% {
+  22% {
     opacity: 1;
   }
   100% {
     opacity: 1;
-    transform: translateY(-105%) scale(2);
+    transform: translateY(-100%);
   }
 }
 
