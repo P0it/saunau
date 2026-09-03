@@ -192,18 +192,19 @@ body {
  */
 .splash-ask {
   animation:
-    splash-ask 0.4s cubic-bezier(0.2, 1.5, 0.4, 1) 0.1s both,
-    splash-swallow 0.5s ease-in 1.02s forwards;
+    splash-ask 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) 0.15s both,
+    splash-swallow 0.8s ease-in 1.6s forwards;
 }
 
 .splash-say {
   animation:
-    splash-say 0.4s cubic-bezier(0.2, 1.5, 0.4, 1) 0.46s both,
-    splash-swallow 0.5s ease-in 1.12s forwards;
+    splash-say 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) 0.72s both,
+    splash-swallow 0.8s ease-in 1.75s forwards;
 }
 
 /*
- * 김 — 흰 바탕 위의 흰 김은 안 보이므로 아주 옅은 붉은 기를 섞는다(브랜드 온도).
+ * 김 — 흰 바탕 위의 흰 김은 안 보이므로 따뜻한 회색으로 깐다.
+ * (붉은 김을 써봤으나 김이 아니라 붉은 빛으로 읽혔다. 김은 회색이어야 김이다.)
  * 덩어리마다 폭·가로위치·시작 시각이 어긋나야 한 덩이로 뭉치지 않는다.
  */
 .splash-steam {
@@ -220,12 +221,12 @@ body {
   border-radius: 50%;
   background: radial-gradient(
     circle at 50% 50%,
-    rgba(245, 64, 44, 0.13) 0%,
-    rgba(245, 64, 44, 0.075) 42%,
-    rgba(245, 64, 44, 0) 70%
+    rgba(124, 118, 111, 0.22) 0%,
+    rgba(124, 118, 111, 0.12) 42%,
+    rgba(124, 118, 111, 0) 70%
   );
-  filter: blur(12px);
-  animation: splash-steam 1.35s cubic-bezier(0.32, 0.66, 0.4, 1) both;
+  filter: blur(14px);
+  animation: splash-steam 2s cubic-bezier(0.32, 0.66, 0.4, 1) both;
 }
 
 @keyframes splash-steam {
@@ -248,7 +249,7 @@ body {
   inset: 0;
   background: #fff;
   pointer-events: none;
-  animation: splash-veil 0.42s ease-in 1.18s both;
+  animation: splash-veil 0.65s ease-in 1.95s both;
 }
 
 /* 완전한 흰색까지 가지 않는다 — 순백 플래시는 세게 때리고, 홈 배경도 순백이 아니다 */

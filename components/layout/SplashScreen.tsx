@@ -12,19 +12,19 @@ import { useEffect, useState } from "react";
  *
  * AppFrame 최초 마운트 시 1회만 표시(클라이언트 라우팅 전환에는 다시 안 뜸).
  */
-const HOLD_MS = 1550; // 대화 + 김이 차오르는 시간 (CSS 딜레이와 함께 움직인다)
-const FADE_MS = 500; // 하얗게 씻긴 화면이 걷히며 홈이 드러나는 시간
+const HOLD_MS = 2600; // 대화 + 김이 차오르는 시간 (CSS 딜레이와 함께 움직인다)
+const FADE_MS = 700; // 하얗게 씻긴 화면이 걷히며 홈이 드러나는 시간
 
 /** 스플래시가 완전히 사라지기까지의 총 시간 — 이후에 떠야 하는 프롬프트류의 지연 기준. */
 export const SPLASH_TOTAL_MS = HOLD_MS + FADE_MS;
 
 /** 김 덩어리 — 폭·가로위치·시작 시각을 어긋나게 둬야 뭉치지 않고 피어오른다. */
 const PUFFS = [
-  { left: "-20%", width: "80%", animationDelay: "0.95s" },
-  { left: "28%", width: "88%", animationDelay: "1.02s" },
-  { left: "-6%", width: "66%", animationDelay: "1.12s" },
-  { left: "44%", width: "72%", animationDelay: "1.18s" },
-  { left: "10%", width: "94%", animationDelay: "1.25s" },
+  { left: "-20%", width: "80%", animationDelay: "1.35s" },
+  { left: "28%", width: "88%", animationDelay: "1.45s" },
+  { left: "-6%", width: "66%", animationDelay: "1.58s" },
+  { left: "44%", width: "72%", animationDelay: "1.66s" },
+  { left: "10%", width: "94%", animationDelay: "1.75s" },
 ];
 
 export function SplashScreen({ fullBleed = false }: { fullBleed?: boolean }) {
@@ -45,7 +45,7 @@ export function SplashScreen({ fullBleed = false }: { fullBleed?: boolean }) {
     <div
       aria-hidden
       className={
-        "fixed inset-y-0 left-1/2 z-[60] flex w-full -translate-x-1/2 flex-col items-center justify-center overflow-hidden bg-card transition-opacity duration-500 ease-out" +
+        "fixed inset-y-0 left-1/2 z-[60] flex w-full -translate-x-1/2 flex-col items-center justify-center overflow-hidden bg-card transition-opacity duration-700 ease-out" +
         (fullBleed ? "" : " max-w-[430px]")
       }
       style={{ opacity: phase === "fade" ? 0 : 1 }}
