@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
  *
  * AppFrame 최초 마운트 시 1회만 표시(클라이언트 라우팅 전환에는 다시 안 뜸).
  */
-const HOLD_MS = 2600; // 대화 + 김이 차오르는 시간 (CSS 딜레이와 함께 움직인다)
+const HOLD_MS = 2900; // 대화 + 김이 차오르는 시간 (CSS 딜레이와 함께 움직인다)
 const FADE_MS = 700; // 하얗게 씻긴 화면이 걷히며 홈이 드러나는 시간
 
 /** 스플래시가 완전히 사라지기까지의 총 시간 — 이후에 떠야 하는 프롬프트류의 지연 기준. */
@@ -43,11 +43,11 @@ export function SplashScreen({ fullBleed = false }: { fullBleed?: boolean }) {
     >
       {/* 두 마디를 화면 좌·우 끝에 붙인다 — 가운데 모아두면 대화가 아니라 목록으로 읽힌다.
           풀블리드(지도)에서도 안쪽 폭은 430px 로 묶어 두 말풍선이 지나치게 멀어지지 않게. */}
-      <div className="flex w-full max-w-[430px] flex-col gap-[10px] px-6">
-        <span className="splash-ask splash-bubble self-start rounded-bl-[7px] bg-[#f0ede8] text-[#46413b]">
+      <div className="flex w-full max-w-[430px] flex-col gap-[26px] px-6">
+        <span className="splash-ask splash-bubble self-start rounded-bl-[9px] bg-[#f0ede8] text-[#46413b]">
           사우?
         </span>
-        <span className="splash-say splash-bubble self-end rounded-br-[7px] bg-brand text-white shadow-[0_6px_16px_rgba(245,64,44,0.28)]">
+        <span className="splash-say splash-bubble self-end rounded-br-[9px] bg-brand text-white shadow-[0_8px_22px_rgba(245,64,44,0.3)]">
           나우!
         </span>
       </div>
