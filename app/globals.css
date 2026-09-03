@@ -133,8 +133,9 @@ body {
 }
 
 /*
- * 스플래시 — "사우?" 를 받고 "나우!" 로 답하는 채팅 한 마디.
+ * 스플래시 — "사우?" 를 받고 "나우!" 로 답하는 채팅 한 마디, 그리고 김.
  * 받은 말풍선은 왼쪽 아래에서, 보낸 말풍선은 오른쪽 아래에서 튀어 들어온다.
+ * 대화가 끝나면 아래에서 김이 차올라 말풍선을 삼키고, 화면이 하얗게 씻기며 홈으로 넘어간다.
  * (예전엔 로고 마크가 내려앉고 워드마크가 뜨는 구성이었다. 두 마디가 묻고 답하는
  *  관계라는 걸 형태로 보여주지 못해 채팅 말풍선으로 바꿨다.)
  */
@@ -170,19 +171,105 @@ body {
   }
 }
 
-/* 튀어 오르는 느낌은 오버슈트 이징에서 나온다 — 지속시간을 늘리지 않는다 */
+/* 말풍선이 김에 잠긴다 — 사라지는 게 아니라 흐려지며 먹힌다 */
+@keyframes splash-swallow {
+  0% {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(7px);
+    transform: scale(1.06);
+  }
+}
+
+/*
+ * 튀어 오르는 느낌은 오버슈트 이징에서 나온다 — 지속시간을 늘리지 않는다.
+ * ⚠ 두 번째(삼킴) 애니메이션은 forwards 로만 둔다. both 로 두면 backwards 채움이
+ *   딜레이 구간까지 0% 키프레임을 덮어써서 등장 애니메이션이 통째로 죽는다.
+ */
 .splash-ask {
-  animation: splash-ask 0.4s cubic-bezier(0.2, 1.5, 0.4, 1) 0.1s both;
+  animation:
+    splash-ask 0.4s cubic-bezier(0.2, 1.5, 0.4, 1) 0.1s both,
+    splash-swallow 0.5s ease-in 1.02s forwards;
 }
 
 .splash-say {
-  animation: splash-say 0.4s cubic-bezier(0.2, 1.5, 0.4, 1) 0.46s both;
+  animation:
+    splash-say 0.4s cubic-bezier(0.2, 1.5, 0.4, 1) 0.46s both,
+    splash-swallow 0.5s ease-in 1.12s forwards;
 }
 
+/*
+ * 김 — 흰 바탕 위의 흰 김은 안 보이므로 아주 옅은 붉은 기를 섞는다(브랜드 온도).
+ * 덩어리마다 폭·가로위치·시작 시각이 어긋나야 한 덩이로 뭉치지 않는다.
+ */
+.splash-steam {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.splash-steam span {
+  position: absolute;
+  bottom: -34%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(245, 64, 44, 0.13) 0%,
+    rgba(245, 64, 44, 0.075) 42%,
+    rgba(245, 64, 44, 0) 70%
+  );
+  filter: blur(12px);
+  animation: splash-steam 1.35s cubic-bezier(0.32, 0.66, 0.4, 1) both;
+}
+
+@keyframes splash-steam {
+  0% {
+    opacity: 0;
+    transform: translateY(34%) scale(0.55);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-105%) scale(2);
+  }
+}
+
+/* 김이 가장 짙어지는 순간 화면을 덮어, 홈이 드러날 때 이음매가 안 보이게 한다 */
+.splash-veil {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  pointer-events: none;
+  animation: splash-veil 0.42s ease-in 1.18s both;
+}
+
+/* 완전한 흰색까지 가지 않는다 — 순백 플래시는 세게 때리고, 홈 배경도 순백이 아니다 */
+@keyframes splash-veil {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0.9;
+  }
+}
+
+/* 모션을 줄이는 사용자에게는 대화도 김도 없이 정지된 한 장면만 보인다 */
 @media (prefers-reduced-motion: reduce) {
   .splash-ask,
   .splash-say {
     animation: none;
+  }
+  .splash-steam,
+  .splash-veil {
+    display: none;
   }
 }
 
