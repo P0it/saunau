@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LogoMark } from "@/components/illustrations";
-import { Wordmark } from "./Wordmark";
 
 /**
- * 앱 첫 로딩 스플래시 — 흰 바탕에 로고 마크가 내려앉고 워드마크가 뒤따라 뜬다.
+ * 앱 첫 로딩 스플래시 — "사우?" 를 받고 "나우!" 로 답하는 채팅 한 마디.
+ * 왼쪽(받은 말풍선)이 묻고 오른쪽(보낸 말풍선)이 답한다 — 읽는 순서가 곧 대화 순서라
+ * 서비스 이름 두 마디의 관계가 설명 없이 잡힌다.
  * AppFrame 최초 마운트 시 1회만 표시(클라이언트 라우팅 전환에는 다시 안 뜸).
  * 표시 → 페이드아웃 → 언마운트.
  */
@@ -38,13 +38,13 @@ export function SplashScreen({ fullBleed = false }: { fullBleed?: boolean }) {
       }
       style={{ opacity: phase === "fade" ? 0 : 1 }}
     >
-      <div className="flex flex-col items-center gap-[22px]">
-        {/* 마크가 살짝 위에서 내려앉는다 — 판이 바닥에 놓이는 동작 */}
-        <span className="splash-mark inline-flex">
-          <LogoMark size={92} />
+      {/* 말풍선 폭을 고정해 두 마디가 좌·우로 확실히 갈라 서게 한다 */}
+      <div className="flex w-[220px] flex-col gap-[10px]">
+        <span className="splash-ask splash-bubble self-start rounded-bl-[7px] bg-[#f0ede8] text-[#46413b]">
+          사우?
         </span>
-        <span className="splash-type">
-          <Wordmark className="text-[40px] text-brand" />
+        <span className="splash-say splash-bubble self-end rounded-br-[7px] bg-brand text-white shadow-[0_6px_16px_rgba(245,64,44,0.28)]">
+          나우!
         </span>
       </div>
     </div>

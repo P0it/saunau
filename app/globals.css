@@ -29,13 +29,20 @@
     sans-serif;
 }
 
+/* 앱 셸은 뷰포트에 고정 — 스크롤은 항상 내부(main·시트·가로 레일)에서만 일어난다.
+   문서 스크롤을 열어두면 iOS 사파리에서 지도뷰(문서에 스크롤할 게 없는 화면)의 드래그가
+   문서 러버밴드로 새어 상단에 body 배경이 여백처럼 드러난다. overscroll-behavior 로 차단. */
 html {
   height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
   margin: 0;
-  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: #eaeaec; /* 데스크톱 프레임 외곽 배경(디자인 캔버스 색) */
   color: var(--color-ink);
   font-family: var(--font-sans);
@@ -125,40 +132,56 @@ body {
     0 4px 18px rgba(0, 0, 0, 0.16);
 }
 
-/* 스플래시 로고 — 마크가 살짝 위에서 내려앉고, 워드마크가 뒤따라 뜬다. */
-@keyframes splash-mark {
+/*
+ * 스플래시 — "사우?" 를 받고 "나우!" 로 답하는 채팅 한 마디.
+ * 받은 말풍선은 왼쪽 아래에서, 보낸 말풍선은 오른쪽 아래에서 튀어 들어온다.
+ * (예전엔 로고 마크가 내려앉고 워드마크가 뜨는 구성이었다. 두 마디가 묻고 답하는
+ *  관계라는 걸 형태로 보여주지 못해 채팅 말풍선으로 바꿨다.)
+ */
+.splash-bubble {
+  padding: 11px 20px 13px;
+  border-radius: 22px;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+@keyframes splash-ask {
   0% {
     opacity: 0;
-    transform: translateY(-10px) scale(0.94);
+    transform: translate(-14px, 8px) scale(0.8);
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: none;
   }
 }
 
-@keyframes splash-type {
+@keyframes splash-say {
   0% {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translate(14px, 8px) scale(0.8);
   }
   100% {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
-.splash-mark {
-  animation: splash-mark 0.62s cubic-bezier(0.16, 1, 0.3, 1) both;
+/* 튀어 오르는 느낌은 오버슈트 이징에서 나온다 — 지속시간을 늘리지 않는다 */
+.splash-ask {
+  animation: splash-ask 0.4s cubic-bezier(0.2, 1.5, 0.4, 1) 0.1s both;
 }
 
-.splash-type {
-  animation: splash-type 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both;
+.splash-say {
+  animation: splash-say 0.4s cubic-bezier(0.2, 1.5, 0.4, 1) 0.46s both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .splash-mark,
-  .splash-type {
+  .splash-ask,
+  .splash-say {
     animation: none;
   }
 }
