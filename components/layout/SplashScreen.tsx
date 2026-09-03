@@ -12,11 +12,33 @@ import { useEffect, useState } from "react";
  *
  * AppFrame 최초 마운트 시 1회만 표시(클라이언트 라우팅 전환에는 다시 안 뜸).
  */
-const HOLD_MS = 2900; // 대화 + 김이 차오르는 시간 (CSS 딜레이와 함께 움직인다)
+const HOLD_MS = 3000; // 대화 + 김이 차오르는 시간 (CSS 딜레이와 함께 움직인다)
 const FADE_MS = 700; // 하얗게 씻긴 화면이 걷히며 홈이 드러나는 시간
 
 /** 스플래시가 완전히 사라지기까지의 총 시간 — 이후에 떠야 하는 프롬프트류의 지연 기준. */
 export const SPLASH_TOTAL_MS = HOLD_MS + FADE_MS;
+
+/*
+ * 김 덩이 — top/left 는 "다 피어오른 뒤의 자리"다. 세 줄로 화면을 겹쳐 덮게 미리 깔아두고
+ * 각자 아래에서 밀려 올라오게 한다. 자리를 미리 정해두므로 마지막에 빈 구석이 남지 않고,
+ * 아랫줄부터 늦게 도착하는 윗줄 순으로 시각을 어긋내 뭉게뭉게 올라오는 것처럼 읽힌다.
+ */
+const PUFFS = [
+  { top: "66%", left: "-14%", width: "66%", animationDelay: "0.95s" },
+  { top: "70%", left: "30%", width: "70%", animationDelay: "1s" },
+  { top: "63%", left: "62%", width: "58%", animationDelay: "1.05s" },
+
+  { top: "40%", left: "-8%", width: "60%", animationDelay: "1.14s" },
+  { top: "36%", left: "34%", width: "64%", animationDelay: "1.19s" },
+  { top: "42%", left: "66%", width: "56%", animationDelay: "1.24s" },
+
+  { top: "14%", left: "-12%", width: "62%", animationDelay: "1.33s" },
+  { top: "10%", left: "32%", width: "66%", animationDelay: "1.38s" },
+  { top: "16%", left: "64%", width: "58%", animationDelay: "1.43s" },
+
+  { top: "-12%", left: "6%", width: "70%", animationDelay: "1.52s" },
+  { top: "-16%", left: "48%", width: "62%", animationDelay: "1.57s" },
+];
 
 export function SplashScreen({ fullBleed = false }: { fullBleed?: boolean }) {
   const [phase, setPhase] = useState<"show" | "fade" | "done">("show");
@@ -52,8 +74,12 @@ export function SplashScreen({ fullBleed = false }: { fullBleed?: boolean }) {
         </span>
       </div>
 
-      {/* 김 — 한 겹이 아래에서 통째로 밀려 올라와 화면을 채운다 */}
-      <div className="splash-steam" />
+      {/* 김 — 덩이들이 아래에서 밀려 올라와 서로 겹치며 화면을 채운다 */}
+      <div className="splash-steam">
+        {PUFFS.map((p) => (
+          <span key={p.animationDelay + p.left} style={p} />
+        ))}
+      </div>
 
       {/* 김이 가장 짙어지는 순간 화면을 하얗게 덮어, 홈이 드러날 때 이음매가 안 보이게 한다 */}
       <div className="splash-veil" />
